@@ -166,16 +166,28 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                           _touchedPieIndex = -1;
                         });
                       },
-                      child: Container(
+                      borderRadius: BorderRadius.circular(8),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeInOutCubic,
                         padding: const EdgeInsets.symmetric(vertical: 8),
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           color: isSelected ? AppColors.elevated(context) : Colors.transparent,
-                          borderRadius: BorderRadius.circular(2),
+                          borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: isSelected ? AppColors.brass : AppColors.border(context),
                             width: isSelected ? 1.5 : 1.0,
                           ),
+                          boxShadow: isSelected
+                              ? [
+                                  BoxShadow(
+                                    color: AppColors.brass.withValues(alpha: 0.15),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ]
+                              : null,
                         ),
                         child: Text(
                           label,
@@ -355,17 +367,28 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                         _touchedPieIndex = -1;
                       });
                     },
-                    borderRadius: BorderRadius.circular(2),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
+                    borderRadius: BorderRadius.circular(8),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeInOutCubic,
+                      padding: const EdgeInsets.symmetric(vertical: 9),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: _activeTab == 'spent' ? AppColors.elevated(context) : Colors.transparent,
-                        borderRadius: BorderRadius.circular(2),
+                        borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: _activeTab == 'spent' ? AppColors.brass : AppColors.border(context),
                           width: _activeTab == 'spent' ? 1.4 : 1.0,
                         ),
+                        boxShadow: _activeTab == 'spent'
+                            ? [
+                                BoxShadow(
+                                  color: AppColors.brass.withValues(alpha: 0.15),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ]
+                            : null,
                       ),
                       child: Text(
                         'SPENT BREAKDOWN',
@@ -387,17 +410,28 @@ class _InsightsScreenState extends ConsumerState<InsightsScreen> {
                         _touchedPieIndex = -1;
                       });
                     },
-                    borderRadius: BorderRadius.circular(2),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
+                    borderRadius: BorderRadius.circular(8),
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      curve: Curves.easeInOutCubic,
+                      padding: const EdgeInsets.symmetric(vertical: 9),
                       alignment: Alignment.center,
                       decoration: BoxDecoration(
                         color: _activeTab == 'received' ? AppColors.elevated(context) : Colors.transparent,
-                        borderRadius: BorderRadius.circular(2),
+                        borderRadius: BorderRadius.circular(8),
                         border: Border.all(
                           color: _activeTab == 'received' ? AppColors.brass : AppColors.border(context),
                           width: _activeTab == 'received' ? 1.4 : 1.0,
                         ),
+                        boxShadow: _activeTab == 'received'
+                            ? [
+                                BoxShadow(
+                                  color: AppColors.brass.withValues(alpha: 0.15),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 1),
+                                ),
+                              ]
+                            : null,
                       ),
                       child: Text(
                         'RECEIVED BREAKDOWN',

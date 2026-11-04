@@ -110,11 +110,16 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
             alignment: Alignment.center,
             children: [
               IconButton(
-                icon: Icon(
-                  _showFilterPanel ? Icons.filter_alt : Icons.filter_alt_outlined,
-                  color: filter.hasActiveFilter ? AppColors.brass : AppColors.textPrimary(context),
+                icon: AnimatedRotation(
+                  turns: _showFilterPanel ? 0.5 : 0.0,
+                  duration: const Duration(milliseconds: 280),
+                  curve: Curves.easeOutCubic,
+                  child: Icon(
+                    _showFilterPanel ? Icons.filter_alt : Icons.filter_alt_outlined,
+                    color: (_showFilterPanel || filter.hasActiveFilter) ? AppColors.brass : AppColors.textPrimary(context),
+                  ),
                 ),
-                tooltip: 'Filter Options',
+                tooltip: 'Filter & Refine',
                 onPressed: () {
                   LedgerHaptics.tick();
                   setState(() => _showFilterPanel = !_showFilterPanel);
@@ -177,289 +182,329 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
             ),
           ),
 
-          // Active Filter Chips Bar (When any filter or non-default sort is active)
-          if (filter.hasActiveFilter) ...[
-            Container(
-              padding: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-              height: 38,
-              child: ListView(
-                scrollDirection: Axis.horizontal,
-                children: [
-                  // Clear All Pill
-                  InkWell(
-                    onTap: () {
-                      LedgerHaptics.tick();
-                      _searchController.clear();
-                      ref.read(ledgerFilterProvider.notifier).setFilter(const LedgerFilterState());
-                    },
+          // Active Filter Chips Bar (Smooth animated glide in/out)
+          AnimatedSize(
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.fastOutSlowIn,
+            alignment: Alignment.topCenter,
+            child: filter.hasActiveFilter
+                ? Container(
+                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 6),
+                    height: 42,
+                    child: ListView(
+                      scrollDirection: Axis.horizontal,
+                      children: [
+                        // Clear All Pill
+                        InkWell(
+                          onTap: () {
+                            LedgerHaptics.tick();
+                            _searchController.clear();
+                            ref.read(ledgerFilterProvider.notifier).setFilter(const LedgerFilterState());
+                          },
+                          borderRadius: BorderRadius.circular(16),
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            margin: const EdgeInsets.only(right: 8),
+                            decoration: BoxDecoration(
+                              color: AppColors.expense(context).withValues(alpha: 0.15),
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: AppColors.expense(context).withValues(alpha: 0.4)),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(Icons.refresh, size: 12, color: AppColors.expense(context)),
+                                const SizedBox(width: 4),
+                                Text(
+                                  'RESET ALL',
+                                  style: AppTypography.labelGothic(color: AppColors.expense(context), fontSize: 9),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+
+                        // Sort Chip
+                        if (filter.sortOption != LedgerSortOption.newestFirst)
+                          _buildActiveFilterChip(
+                            context: context,
+                            label: 'Sort: ${_sortOptionLabel(filter.sortOption)}',
+                            onRemove: () => ref.read(ledgerFilterProvider.notifier).setFilter(
+                                  filter.copyWith(sortOption: LedgerSortOption.newestFirst),
+                                ),
+                          ),
+
+                        // Type Chip
+                        if (filter.type != null)
+                          _buildActiveFilterChip(
+                            context: context,
+                            label: filter.type == 'expense' ? 'Spent Only' : 'Received Only',
+                            onRemove: () => ref.read(ledgerFilterProvider.notifier).setFilter(
+                                  filter.copyWith(clearType: true),
+                                ),
+                          ),
+
+                        // Category Chip
+                        if (filter.categoryId != null)
+                          _buildActiveFilterChip(
+                            context: context,
+                            label: categoryMap[filter.categoryId]?.name ?? 'Category',
+                            onRemove: () => ref.read(ledgerFilterProvider.notifier).setFilter(
+                                  filter.copyWith(clearCategory: true),
+                                ),
+                          ),
+
+                        // Tag Chip
+                        if (filter.tagId != null)
+                          _buildActiveFilterChip(
+                            context: context,
+                            label: '#${tagMap[filter.tagId] ?? 'tag'}',
+                            onRemove: () => ref.read(ledgerFilterProvider.notifier).setFilter(
+                                  filter.copyWith(clearTag: true),
+                                ),
+                          ),
+
+                        // Date Range Chip
+                        if (filter.dateRange != null)
+                          _buildActiveFilterChip(
+                            context: context,
+                            label:
+                                '${LedgerDateUtils.formatShortDate(filter.dateRange!.start)} – ${LedgerDateUtils.formatShortDate(filter.dateRange!.end)}',
+                            onRemove: () => ref.read(ledgerFilterProvider.notifier).setFilter(
+                                  filter.copyWith(clearDateRange: true),
+                                ),
+                          ),
+                      ],
+                    ),
+                  )
+                : const SizedBox.shrink(),
+          ),
+
+          // Smooth Expandable Filter & Sort Drawer
+          AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.fastOutSlowIn,
+            alignment: Alignment.topCenter,
+            child: _showFilterPanel
+                ? AnimatedOpacity(
+                    duration: const Duration(milliseconds: 240),
+                    curve: Curves.easeIn,
+                    opacity: _showFilterPanel ? 1.0 : 0.0,
                     child: Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                      margin: const EdgeInsets.only(right: 6),
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+                      padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: AppColors.expense(context).withValues(alpha: 0.15),
-                        borderRadius: BorderRadius.circular(2),
-                        border: Border.all(color: AppColors.expense(context).withValues(alpha: 0.4)),
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(Icons.refresh, size: 12, color: AppColors.expense(context)),
-                          const SizedBox(width: 4),
-                          Text(
-                            'RESET ALL',
-                            style: AppTypography.labelGothic(color: AppColors.expense(context), fontSize: 9),
+                        color: AppColors.elevated(context),
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: AppColors.border(context)),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withValues(alpha: 0.12),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
                           ),
                         ],
                       ),
-                    ),
-                  ),
-
-                  // Sort Chip
-                  if (filter.sortOption != LedgerSortOption.newestFirst)
-                    _buildActiveFilterChip(
-                      context: context,
-                      label: 'Sort: ${_sortOptionLabel(filter.sortOption)}',
-                      onRemove: () => ref.read(ledgerFilterProvider.notifier).setFilter(
-                            filter.copyWith(sortOption: LedgerSortOption.newestFirst),
-                          ),
-                    ),
-
-                  // Type Chip
-                  if (filter.type != null)
-                    _buildActiveFilterChip(
-                      context: context,
-                      label: filter.type == 'expense' ? 'Spent Only' : 'Received Only',
-                      onRemove: () => ref.read(ledgerFilterProvider.notifier).setFilter(
-                            filter.copyWith(clearType: true),
-                          ),
-                    ),
-
-                  // Category Chip
-                  if (filter.categoryId != null)
-                    _buildActiveFilterChip(
-                      context: context,
-                      label: categoryMap[filter.categoryId]?.name ?? 'Category',
-                      onRemove: () => ref.read(ledgerFilterProvider.notifier).setFilter(
-                            filter.copyWith(clearCategory: true),
-                          ),
-                    ),
-
-                  // Tag Chip
-                  if (filter.tagId != null)
-                    _buildActiveFilterChip(
-                      context: context,
-                      label: '#${tagMap[filter.tagId] ?? 'tag'}',
-                      onRemove: () => ref.read(ledgerFilterProvider.notifier).setFilter(
-                            filter.copyWith(clearTag: true),
-                          ),
-                    ),
-
-                  // Date Range Chip
-                  if (filter.dateRange != null)
-                    _buildActiveFilterChip(
-                      context: context,
-                      label:
-                          '${LedgerDateUtils.formatShortDate(filter.dateRange!.start)} – ${LedgerDateUtils.formatShortDate(filter.dateRange!.end)}',
-                      onRemove: () => ref.read(ledgerFilterProvider.notifier).setFilter(
-                            filter.copyWith(clearDateRange: true),
-                          ),
-                    ),
-                ],
-              ),
-            ),
-          ],
-
-          // Expandable Filter & Sort Drawer
-          if (_showFilterPanel)
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: AppColors.elevated(context),
-                borderRadius: BorderRadius.circular(3),
-                border: Border.all(color: AppColors.border(context)),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Row 1: TYPE Filter
-                  Row(
-                    children: [
-                      Text('TYPE: ', style: AppTypography.labelGothic(context: context, fontSize: 10)),
-                      const SizedBox(width: 6),
-                      _buildPillButton(
-                        context: context,
-                        label: 'All',
-                        isSelected: filter.type == null,
-                        onTap: () => ref.read(ledgerFilterProvider.notifier).setFilter(
-                              filter.copyWith(clearType: true),
-                            ),
-                      ),
-                      const SizedBox(width: 6),
-                      _buildPillButton(
-                        context: context,
-                        label: 'Spent',
-                        isSelected: filter.type == 'expense',
-                        onTap: () => ref.read(ledgerFilterProvider.notifier).setFilter(
-                              filter.copyWith(type: 'expense'),
-                            ),
-                      ),
-                      const SizedBox(width: 6),
-                      _buildPillButton(
-                        context: context,
-                        label: 'Received',
-                        isSelected: filter.type == 'income',
-                        onTap: () => ref.read(ledgerFilterProvider.notifier).setFilter(
-                              filter.copyWith(type: 'income'),
-                            ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 10),
-
-                  // Row 2: Category Filter
-                  Row(
-                    children: [
-                      Text('CATEGORY: ', style: AppTypography.labelGothic(context: context, fontSize: 10)),
-                      const SizedBox(width: 6),
-                      Expanded(
-                        child: DropdownButtonHideUnderline(
-                          child: DropdownButton<String?>(
-                            isExpanded: true,
-                            dropdownColor: AppColors.elevated(context),
-                            value: filter.categoryId,
-                            items: [
-                              DropdownMenuItem<String?>(
-                                value: null,
-                                child: Text('All Categories', style: AppTypography.bodyMedium(context: context)),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Row 1: TYPE Filter
+                          Row(
+                            children: [
+                              Text('TYPE: ', style: AppTypography.labelGothic(context: context, fontSize: 10)),
+                              const SizedBox(width: 8),
+                              _buildPillButton(
+                                context: context,
+                                label: 'All',
+                                isSelected: filter.type == null,
+                                onTap: () => ref.read(ledgerFilterProvider.notifier).setFilter(
+                                      filter.copyWith(clearType: true),
+                                    ),
                               ),
-                              ...allCategories.map((c) {
-                                final color = AppColors.getColorByToken(c.colorToken);
-                                return DropdownMenuItem<String?>(
-                                  value: c.id,
-                                  child: Row(
-                                    children: [
-                                      Icon(CategoryIcons.getIcon(c.iconName), size: 14, color: color),
-                                      const SizedBox(width: 6),
-                                      Text(c.name, style: AppTypography.bodyMedium(context: context)),
-                                    ],
-                                  ),
-                                );
-                              }),
+                              const SizedBox(width: 8),
+                              _buildPillButton(
+                                context: context,
+                                label: 'Spent',
+                                isSelected: filter.type == 'expense',
+                                onTap: () => ref.read(ledgerFilterProvider.notifier).setFilter(
+                                      filter.copyWith(type: 'expense'),
+                                    ),
+                              ),
+                              const SizedBox(width: 8),
+                              _buildPillButton(
+                                context: context,
+                                label: 'Received',
+                                isSelected: filter.type == 'income',
+                                onTap: () => ref.read(ledgerFilterProvider.notifier).setFilter(
+                                      filter.copyWith(type: 'income'),
+                                    ),
+                              ),
                             ],
-                            onChanged: (val) {
-                              if (val == null) {
-                                ref.read(ledgerFilterProvider.notifier).setFilter(
-                                      filter.copyWith(clearCategory: true),
-                                    );
-                              } else {
-                                ref.read(ledgerFilterProvider.notifier).setFilter(
-                                      filter.copyWith(categoryId: val),
-                                    );
-                              }
-                            },
                           ),
-                        ),
-                      ),
-                    ],
-                  ),
 
-                  const SizedBox(height: 10),
+                          const SizedBox(height: 12),
 
-                  // Row 3: Date Range Quick Presets
-                  Row(
-                    children: [
-                      Text('DATE: ', style: AppTypography.labelGothic(context: context, fontSize: 10)),
-                      const SizedBox(width: 6),
-                      _buildPillButton(
-                        context: context,
-                        label: 'All Time',
-                        isSelected: filter.dateRange == null,
-                        onTap: () => ref.read(ledgerFilterProvider.notifier).setFilter(
-                              filter.copyWith(clearDateRange: true),
-                            ),
-                      ),
-                      const SizedBox(width: 6),
-                      _buildPillButton(
-                        context: context,
-                        label: 'This Month',
-                        isSelected: false,
-                        onTap: () {
-                          final now = DateTime.now();
-                          final start = DateTime(now.year, now.month, 1);
-                          final end = DateTime(now.year, now.month + 1, 0);
-                          ref.read(ledgerFilterProvider.notifier).setFilter(
-                                filter.copyWith(dateRange: DateTimeRange(start: start, end: end)),
-                              );
-                        },
-                      ),
-                      const SizedBox(width: 6),
-                      _buildPillButton(
-                        context: context,
-                        label: 'Custom 📅',
-                        isSelected: filter.dateRange != null,
-                        onTap: () async {
-                          final picked = await showDateRangePicker(
-                            context: context,
-                            firstDate: DateTime(2020),
-                            lastDate: DateTime.now().add(const Duration(days: 365)),
-                            initialDateRange: filter.dateRange,
-                          );
-                          if (picked != null) {
-                            ref.read(ledgerFilterProvider.notifier).setFilter(
-                                  filter.copyWith(dateRange: picked),
-                                );
-                          }
-                        },
-                      ),
-                    ],
-                  ),
-
-                  // Row 4: Tag Filter (If tags exist)
-                  if (allTags.isNotEmpty) ...[
-                    const SizedBox(height: 10),
-                    Row(
-                      children: [
-                        Text('TAG: ', style: AppTypography.labelGothic(context: context, fontSize: 10)),
-                        const SizedBox(width: 6),
-                        Expanded(
-                          child: DropdownButtonHideUnderline(
-                            child: DropdownButton<String?>(
-                              isExpanded: true,
-                              dropdownColor: AppColors.elevated(context),
-                              value: filter.tagId,
-                              items: [
-                                DropdownMenuItem<String?>(
-                                  value: null,
-                                  child: Text('All Tags', style: AppTypography.bodyMedium(context: context)),
+                          // Row 2: Category Filter
+                          Row(
+                            children: [
+                              Text('CATEGORY: ', style: AppTypography.labelGothic(context: context, fontSize: 10)),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 10),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.surface(context),
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(color: AppColors.border(context)),
+                                  ),
+                                  child: DropdownButtonHideUnderline(
+                                    child: DropdownButton<String?>(
+                                      isExpanded: true,
+                                      dropdownColor: AppColors.elevated(context),
+                                      value: filter.categoryId,
+                                      items: [
+                                        DropdownMenuItem<String?>(
+                                          value: null,
+                                          child: Text('All Categories', style: AppTypography.bodyMedium(context: context)),
+                                        ),
+                                        ...allCategories.map((c) {
+                                          final color = AppColors.getColorByToken(c.colorToken);
+                                          return DropdownMenuItem<String?>(
+                                            value: c.id,
+                                            child: Row(
+                                              children: [
+                                                Icon(CategoryIcons.getIcon(c.iconName), size: 14, color: color),
+                                                const SizedBox(width: 6),
+                                                Text(c.name, style: AppTypography.bodyMedium(context: context)),
+                                              ],
+                                            ),
+                                          );
+                                        }),
+                                      ],
+                                      onChanged: (val) {
+                                        if (val == null) {
+                                          ref.read(ledgerFilterProvider.notifier).setFilter(
+                                                filter.copyWith(clearCategory: true),
+                                              );
+                                        } else {
+                                          ref.read(ledgerFilterProvider.notifier).setFilter(
+                                                filter.copyWith(categoryId: val),
+                                              );
+                                        }
+                                      },
+                                    ),
+                                  ),
                                 ),
-                                ...allTags.map((t) {
-                                  return DropdownMenuItem<String?>(
-                                    value: t.id,
-                                    child: Text('#${t.name}', style: AppTypography.bodyMedium(color: AppColors.brass)),
-                                  );
-                                }),
-                              ],
-                              onChanged: (val) {
-                                if (val == null) {
-                                  ref.read(ledgerFilterProvider.notifier).setFilter(
-                                        filter.copyWith(clearTag: true),
-                                      );
-                                } else {
-                                  ref.read(ledgerFilterProvider.notifier).setFilter(
-                                        filter.copyWith(tagId: val),
-                                      );
-                                }
-                              },
-                            ),
+                              ),
+                            ],
                           ),
-                        ),
-                      ],
+
+                          const SizedBox(height: 12),
+
+                          // Row 3: Date Range Quick Presets
+                          Row(
+                            children: [
+                              Text('DATE: ', style: AppTypography.labelGothic(context: context, fontSize: 10)),
+                              const SizedBox(width: 8),
+                              _buildPillButton(
+                                context: context,
+                                label: 'All Time',
+                                isSelected: filter.dateRange == null,
+                                onTap: () => ref.read(ledgerFilterProvider.notifier).setFilter(
+                                      filter.copyWith(clearDateRange: true),
+                                    ),
+                              ),
+                              const SizedBox(width: 8),
+                              _buildPillButton(
+                                context: context,
+                                label: 'This Month',
+                                isSelected: false,
+                                onTap: () {
+                                  final now = DateTime.now();
+                                  final start = DateTime(now.year, now.month, 1);
+                                  final end = DateTime(now.year, now.month + 1, 0);
+                                  ref.read(ledgerFilterProvider.notifier).setFilter(
+                                        filter.copyWith(dateRange: DateTimeRange(start: start, end: end)),
+                                      );
+                                },
+                              ),
+                              const SizedBox(width: 8),
+                              _buildPillButton(
+                                context: context,
+                                label: 'Custom 📅',
+                                isSelected: filter.dateRange != null,
+                                onTap: () async {
+                                  final picked = await showDateRangePicker(
+                                    context: context,
+                                    firstDate: DateTime(2020),
+                                    lastDate: DateTime.now().add(const Duration(days: 365)),
+                                    initialDateRange: filter.dateRange,
+                                  );
+                                  if (picked != null) {
+                                    ref.read(ledgerFilterProvider.notifier).setFilter(
+                                          filter.copyWith(dateRange: picked),
+                                        );
+                                  }
+                                },
+                              ),
+                            ],
+                          ),
+
+                          // Row 4: Tag Filter (If tags exist)
+                          if (allTags.isNotEmpty) ...[
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Text('TAG: ', style: AppTypography.labelGothic(context: context, fontSize: 10)),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.surface(context),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(color: AppColors.border(context)),
+                                    ),
+                                    child: DropdownButtonHideUnderline(
+                                      child: DropdownButton<String?>(
+                                        isExpanded: true,
+                                        dropdownColor: AppColors.elevated(context),
+                                        value: filter.tagId,
+                                        items: [
+                                          DropdownMenuItem<String?>(
+                                            value: null,
+                                            child: Text('All Tags', style: AppTypography.bodyMedium(context: context)),
+                                          ),
+                                          ...allTags.map((t) {
+                                            return DropdownMenuItem<String?>(
+                                              value: t.id,
+                                              child: Text('#${t.name}', style: AppTypography.bodyMedium(color: AppColors.brass)),
+                                            );
+                                          }),
+                                        ],
+                                        onChanged: (val) {
+                                          if (val == null) {
+                                            ref.read(ledgerFilterProvider.notifier).setFilter(
+                                                  filter.copyWith(clearTag: true),
+                                                );
+                                          } else {
+                                            ref.read(ledgerFilterProvider.notifier).setFilter(
+                                                  filter.copyWith(tagId: val),
+                                                );
+                                          }
+                                        },
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ],
+                      ),
                     ),
-                  ],
-                ],
-              ),
-            ),
+                  )
+                : const SizedBox.shrink(),
+          ),
 
           // Ledger Entries List
           Expanded(
@@ -698,15 +743,27 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
         LedgerHaptics.tick();
         onTap();
       },
-      borderRadius: BorderRadius.circular(2),
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      borderRadius: BorderRadius.circular(8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeInOutCubic,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.brass : AppColors.surface(context),
-          borderRadius: BorderRadius.circular(2),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isSelected ? AppColors.brass : AppColors.border(context),
+            width: isSelected ? 1.2 : 1.0,
           ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.brass.withValues(alpha: 0.25),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ]
+              : null,
         ),
         child: Text(
           label,
@@ -724,13 +781,15 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
     required String label,
     required VoidCallback onRemove,
   }) {
-    return Container(
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 200),
+      curve: Curves.easeInOut,
       margin: const EdgeInsets.only(right: 6),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
         color: AppColors.elevated(context),
-        borderRadius: BorderRadius.circular(2),
-        border: Border.all(color: AppColors.brass),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: AppColors.brass.withValues(alpha: 0.8)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -739,13 +798,14 @@ class _LedgerScreenState extends ConsumerState<LedgerScreen> {
             label,
             style: AppTypography.bodySmall(color: AppColors.brass),
           ),
-          const SizedBox(width: 4),
+          const SizedBox(width: 5),
           InkWell(
             onTap: () {
               LedgerHaptics.tick();
               onRemove();
             },
-            child: Icon(Icons.close, size: 13, color: AppColors.textSecondary(context)),
+            borderRadius: BorderRadius.circular(12),
+            child: Icon(Icons.close, size: 14, color: AppColors.textSecondary(context)),
           ),
         ],
       ),

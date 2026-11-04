@@ -272,8 +272,8 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
       decoration: BoxDecoration(
         color: AppColors.surface(context),
         borderRadius: const BorderRadius.only(
-          topLeft: Radius.circular(4),
-          topRight: Radius.circular(4),
+          topLeft: Radius.circular(16),
+          topRight: Radius.circular(16),
         ),
         border: Border(
           top: BorderSide(color: AppColors.border(context), width: 1),
@@ -384,16 +384,27 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
                         setState(() => _selectedCategory = cat);
                         LedgerHaptics.tick();
                       },
-                      borderRadius: BorderRadius.circular(2),
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      borderRadius: BorderRadius.circular(8),
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        curve: Curves.easeInOutCubic,
+                        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
                         decoration: BoxDecoration(
                           color: isSelected ? AppColors.elevated(context) : Colors.transparent,
-                          borderRadius: BorderRadius.circular(2),
+                          borderRadius: BorderRadius.circular(8),
                           border: Border.all(
                             color: isSelected ? AppColors.brass : AppColors.border(context),
                             width: isSelected ? 1.4 : 1.0,
                           ),
+                          boxShadow: isSelected
+                              ? [
+                                  BoxShadow(
+                                    color: AppColors.brass.withValues(alpha: 0.15),
+                                    blurRadius: 4,
+                                    offset: const Offset(0, 1),
+                                  ),
+                                ]
+                              : null,
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
@@ -505,70 +516,81 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
                 ),
               ),
 
-              if (_isDetailsExpanded) ...[
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  child: TextField(
-                    controller: _noteController,
-                    decoration: const InputDecoration(
-                      hintText: 'Add note (e.g. Chai with friends)',
-                      isDense: true,
-                    ),
-                    style: AppTypography.bodyMedium(context: context),
-                  ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _tagController,
-                          decoration: InputDecoration(
-                            hintText: 'Add tag (e.g. #trip-goa)',
-                            isDense: true,
-                            suffixIcon: IconButton(
-                              icon: const Icon(Icons.add, size: 16, color: AppColors.brass),
-                              onPressed: () => _addTag(_tagController.text),
+              // Smooth Expandable Note & Tags drawer
+              AnimatedSize(
+                duration: const Duration(milliseconds: 280),
+                curve: Curves.fastOutSlowIn,
+                alignment: Alignment.topCenter,
+                child: _isDetailsExpanded
+                    ? Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                            child: TextField(
+                              controller: _noteController,
+                              decoration: const InputDecoration(
+                                hintText: 'Add note (e.g. Chai with friends)',
+                                isDense: true,
+                              ),
+                              style: AppTypography.bodyMedium(context: context),
                             ),
                           ),
-                          onSubmitted: _addTag,
-                          style: AppTypography.bodyMedium(context: context),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                if (_selectedTagNames.isNotEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-                    child: Wrap(
-                      spacing: 6,
-                      runSpacing: 4,
-                      children: _selectedTagNames.map((tag) {
-                        return Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: AppColors.elevated(context),
-                            borderRadius: BorderRadius.circular(2),
-                            border: Border.all(color: AppColors.border(context)),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                            child: Row(
+                              children: [
+                                Expanded(
+                                  child: TextField(
+                                    controller: _tagController,
+                                    decoration: InputDecoration(
+                                      hintText: 'Add tag (e.g. #trip-goa)',
+                                      isDense: true,
+                                      suffixIcon: IconButton(
+                                        icon: const Icon(Icons.add, size: 16, color: AppColors.brass),
+                                        onPressed: () => _addTag(_tagController.text),
+                                      ),
+                                    ),
+                                    onSubmitted: _addTag,
+                                    style: AppTypography.bodyMedium(context: context),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text('#$tag', style: AppTypography.bodySmall(color: AppColors.brass)),
-                              const SizedBox(width: 4),
-                              InkWell(
-                                onTap: () => setState(() => _selectedTagNames.remove(tag)),
-                                child: Icon(Icons.close, size: 12, color: AppColors.textSecondary(context)),
+                          if (_selectedTagNames.isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+                              child: Wrap(
+                                spacing: 6,
+                                runSpacing: 4,
+                                children: _selectedTagNames.map((tag) {
+                                  return Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                    decoration: BoxDecoration(
+                                      color: AppColors.elevated(context),
+                                      borderRadius: BorderRadius.circular(12),
+                                      border: Border.all(color: AppColors.border(context)),
+                                    ),
+                                    child: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text('#$tag', style: AppTypography.bodySmall(color: AppColors.brass)),
+                                        const SizedBox(width: 5),
+                                        InkWell(
+                                          onTap: () => setState(() => _selectedTagNames.remove(tag)),
+                                          child: Icon(Icons.close, size: 13, color: AppColors.textSecondary(context)),
+                                        ),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
                               ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ),
-              ],
+                            ),
+                        ],
+                      )
+                    : const SizedBox.shrink(),
+              ),
 
               const SizedBox(height: 6),
 
@@ -628,17 +650,28 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
   }) {
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(2),
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 8),
+      borderRadius: BorderRadius.circular(8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOutCubic,
+        padding: const EdgeInsets.symmetric(vertical: 9),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: isSelected ? activeColor : AppColors.elevated(context),
-          borderRadius: BorderRadius.circular(2),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isSelected ? activeColor : AppColors.border(context),
-            width: 1,
+            width: isSelected ? 1.5 : 1.0,
           ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: activeColor.withValues(alpha: 0.25),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ]
+              : null,
         ),
         child: Text(
           label,
@@ -672,17 +705,28 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
 
     return InkWell(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(2),
-      child: Container(
+      borderRadius: BorderRadius.circular(8),
+      child: AnimatedContainer(
+        duration: const Duration(milliseconds: 200),
+        curve: Curves.easeInOutCubic,
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
         alignment: Alignment.center,
         decoration: BoxDecoration(
           color: isSelected ? AppColors.brass : AppColors.elevated(context),
-          borderRadius: BorderRadius.circular(2),
+          borderRadius: BorderRadius.circular(8),
           border: Border.all(
             color: isSelected ? AppColors.brass : AppColors.border(context),
             width: isSelected ? 1.4 : 1.0,
           ),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: AppColors.brass.withValues(alpha: 0.2),
+                    blurRadius: 4,
+                    offset: const Offset(0, 1),
+                  ),
+                ]
+              : null,
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -735,13 +779,13 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
                         LedgerHaptics.tick();
                         _onKeypadTap(key);
                       },
-                      borderRadius: BorderRadius.circular(2),
+                      borderRadius: BorderRadius.circular(8),
                       child: Container(
-                        height: 44,
+                        height: 46,
                         alignment: Alignment.center,
                         decoration: BoxDecoration(
                           color: AppColors.elevated(context),
-                          borderRadius: BorderRadius.circular(2),
+                          borderRadius: BorderRadius.circular(8),
                           border: Border.all(color: AppColors.border(context), width: 1),
                         ),
                         child: key == 'BACK'

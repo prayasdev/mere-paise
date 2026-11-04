@@ -120,9 +120,17 @@ class _MainNavigationScaffoldState extends ConsumerState<MainNavigationScaffold>
     ];
 
     return Scaffold(
-      body: IndexedStack(
-        index: _currentIndex,
-        children: pages,
+      body: AnimatedSwitcher(
+        duration: const Duration(milliseconds: 220),
+        switchInCurve: Curves.easeOutCubic,
+        switchOutCurve: Curves.easeInCubic,
+        transitionBuilder: (child, animation) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+        child: KeyedSubtree(
+          key: ValueKey<int>(_currentIndex),
+          child: pages[_currentIndex],
+        ),
       ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
@@ -150,21 +158,28 @@ class _MainNavigationScaffoldState extends ConsumerState<MainNavigationScaffold>
                     label: 'LEDGER',
                   ),
                 ),
-                // Centre: Square Brass Add (+) Button
+                // Centre: Tactile Brass Add (+) Button
                 SizedBox(
                   width: 56,
                   height: 56,
                   child: Center(
                     child: InkWell(
                       onTap: _openQuickAdd,
-                      borderRadius: BorderRadius.circular(3),
+                      borderRadius: BorderRadius.circular(10),
                       child: Container(
                         width: 44,
                         height: 44,
                         decoration: BoxDecoration(
                           color: AppColors.brass,
-                          borderRadius: BorderRadius.circular(3),
+                          borderRadius: BorderRadius.circular(10),
                           border: Border.all(color: AppColors.brassBright, width: 1),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.brass.withValues(alpha: 0.35),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
+                            ),
+                          ],
                         ),
                         child: const Icon(
                           Icons.add,

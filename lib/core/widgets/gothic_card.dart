@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 
-/// Solid, architectural container with 1px hairline border and 3px radius.
+/// Refined architectural container with 1px hairline border and softened radius.
 /// Automatically adapts background and border between Obsidian (dark) and Vellum (light).
 class GothicCard extends StatelessWidget {
   final Widget child;
@@ -32,7 +32,7 @@ class GothicCard extends StatelessWidget {
       padding: padding,
       decoration: BoxDecoration(
         color: bg,
-        borderRadius: BorderRadius.circular(3),
+        borderRadius: BorderRadius.circular(8),
         border: Border.all(color: border, width: 1),
       ),
       child: child,
@@ -41,7 +41,7 @@ class GothicCard extends StatelessWidget {
     if (onTap != null) {
       return InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(3),
+        borderRadius: BorderRadius.circular(8),
         child: widget,
       );
     }
