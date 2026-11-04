@@ -1,0 +1,491 @@
+Mere Paise: URD and PRD
+Personal finance tracker for one person's money, kept simply and kept honestly. Version 1.0, November 2026.
+0. Decisions up front
+Is Firestore enough, with offline caching? Yes, for a single-user personal tracker it is a good fit. Reasons and caveats:
+Firestore has built-in offline persistence. Reads are served from the local cache, and writes made offline are queued and synced on reconnect. On Android and iOS it is on by default. On the web it must be enabled explicitly with persistentLocalCache.
+Conflicts resolve last-write-wins per document. That is fine for one person on one or two devices.
+Caveat 1: aggregate queries (sum, count) are server-only and do not work offline. So we never rely on them. Totals are computed on the device from cached documents, and we also keep small pre-computed summary documents (section 7.4).
+Caveat 2: runTransaction needs a connection. We use WriteBatch with FieldValue.increment, which works offline.
+Caveat 3: the cache has a size limit, but years of personal transactions are tiny (about 1 KB each), so this is not a practical concern.
+Caveat 4: billing is per document read. The summary documents keep the dashboard and graphs cheap.
+Recommended stack
+Layer
+Choice
+Why
+App
+Flutter android only
+Native feel, one codebase, full control over a custom visual theme
+Auth
+Firebase Auth: Google sign-in, plus phone OTP
+Familiar to Indian users, no passwords to manage
+Database
+Cloud Firestore with offline persistence
+See above
+Backend logic
+Cloud Functions, minimal (summary rebuild, export, account deletion)
+Keeps the client simple
+Quality
+Crashlytics, Analytics (privacy-safe), App Check
+Stability and abuse protection
+Charts
+A custom-themed chart layer (fl_chart, fully restyled)
+Default chart looks would break the gothic theme
+Money is stored as integer paise (₹ 249.50 is stored as 24950). No floating point anywhere. Display formatting uses the Indian grouping system (₹ 1,25,000).
+
+Part A: User Requirements Document (URD)
+The URD says what the user needs, in the user's terms. The PRD in Part B says how the product meets those needs.
+A1. Purpose
+The user wants to know where their money goes and what came in, without effort. Logging an expense must be quicker than forgetting it.
+A2. User profile
+Attribute
+Description
+Primary user
+A student or young earner in India, using a phone daily
+Money habits
+Mostly UPI and cash, irregular income (pocket money, stipend, freelance, salary)
+Tech comfort
+Uses Paytm, Google Pay, PhonePe. Expects that level of polish and speed
+Context of use
+Standing in a shop, on a bus, in a canteen. One hand, often poor network
+Language
+English first. Hinglish-friendly labels. Full Hindi localisation later
+A3. User needs and requirements
+Priority: M = must have for launch, S = should have, C = could have later.
+ID
+The user needs to…
+Priority
+UR-01
+Log an expense in under 5 seconds and 3 taps
+M
+UR-02
+Log money received (income) just as easily
+M
+UR-03
+Use the app with no internet and trust nothing is lost
+M
+UR-04
+See today's, this week's, this month's and this year's spending at a glance
+M
+UR-05
+See all-time totals and history
+M
+UR-06
+See graphs for daily, weekly, monthly, yearly and all-time periods
+M
+UR-07
+Organise entries by category (grocery, snacks, travel, college, and so on)
+M
+UR-08
+Add, rename, recolour, reorder and remove my own categories
+M
+UR-09
+Add custom tags (for example "trip-goa", "exam-week") to any entry
+M
+UR-10
+Instantly tell money out from money in, by colour, sign and position
+M
+UR-11
+Edit or delete a past entry, and undo a mistake
+M
+UR-12
+Search and filter past entries by text, category, tag, amount and date
+M
+UR-13
+Know my balance across cash, bank and UPI accounts
+S
+UR-14
+Set a monthly budget per category and be warned before I overshoot
+S
+UR-15
+Log recurring items (rent, subscriptions, pocket money) automatically
+S
+UR-16
+Back up and export my data (CSV, PDF)
+S
+UR-17
+Lock the app with biometrics or a PIN
+S
+UR-18
+Use the same data on a second device
+S
+UR-19
+Attach a note or a receipt photo to an entry
+C
+UR-20
+Auto-read UPI SMS or notifications to prefill entries
+C
+A4. User stories and acceptance criteria
+US-1: Quick expense (UR-01, UR-10) As a user buying tea for ₹ 20, I open the app, type 20, tap Snacks, and tap Save.
+The amount keypad is open on launch. No extra screen first.
+The last-used category and account are preselected.
+After saving, the entry appears at the top of today's list in the expense colour with a minus sign.
+US-2: Logging income (UR-02) As a user receiving ₹ 5,000 pocket money, I flip the Out/In switch, enter the amount, pick Pocket money and save.
+The whole form re-themes to the income palette, so it is obvious which mode I am in.
+The entry shows with a plus sign.
+US-3: Working offline (UR-03) As a user in a basement canteen with no signal, I log three entries.
+Each saves instantly and appears in all lists and totals.
+A small "Not yet synced" mark shows on pending items and disappears once synced.
+Nothing is lost if I close the app or restart the phone.
+US-4: Reviewing a period (UR-04, UR-05, UR-06) As a user, I choose Day, Week, Month, Year or All.
+I see total out, total in, net, a graph and a category breakdown for that period.
+I move to previous or next periods by swiping or with arrows.
+US-5: Managing categories (UR-07, UR-08) As a user, I add a category "Hostel mess", choose an icon and colour, and later delete it.
+If entries use it, the app asks me to move them to another category or archive it. It never silently erases history.
+US-6: Tags (UR-09) As a user, I type "#goa-trip" on an entry. The tag is created and suggested next time.
+I can open a tag and see its total spend across all categories.
+US-7: Fixing a mistake (UR-11) As a user, I swipe an entry to delete it. A bar offers Undo for 6 seconds.
+Editing an entry updates all totals immediately.
+A5. User scenarios
+Morning commute. Bus fare, one-handed, flaky network. The user logs it in seconds and it syncs later.
+End of month. The user opens Month view, sees groceries and snacks took the largest share, taps the Snacks slice and sees every snack entry.
+New phone. The user signs in with Google and the full history returns.
+Trip. The user tags a week of spending "goa-trip" and later sees the trip's total.
+A6. Constraints and assumptions
+Single user per account. No sharing or family mode in v1.
+Currency is INR only in v1. The data model leaves room for more.
+No bank account linking. All entries are entered by the user.
+The user is the only owner of their data. It is never sold or used for ads.
+
+Part B: Product Requirements Document (PRD)
+1. Product summary
+Name: Mere Paise ("my money") One line: A fast, offline-first ledger for everyday Indian money, built like an account book and not like a toy. Platform: Android first (Flutter). iOS after v1 stabilises. A web viewer is optional later.
+2. Goals and non-goals
+Goals
+Logging an entry takes under 5 seconds.
+The app is fully usable offline, with zero data loss.
+The user can answer "where did my money go?" for any period in two taps.
+The product looks and feels distinct, serious and trustworthy.
+Non-goals for v1
+Bank or UPI account linking, investment tracking, bill payments, multi-currency, shared ledgers, ads.
+3. Release scope
+Release
+Contents
+MVP (v1.0)
+Auth, quick add (expense and income), history with search and filters, categories and tags CRUD, Day/Week/Month/Year/All views with graphs, offline support, edit/delete/undo, light settings, CSV export
+v1.1
+Accounts and balances, transfers, budgets with alerts, recurring entries, biometric lock
+v1.2
+Receipt photo, PDF reports, Hindi localisation, iOS
+Later
+SMS or notification parsing (opt-in, on-device), home-screen widget, web viewer
+4. Information architecture
+Bottom navigation with four destinations and one central action.
+Position
+Screen
+Purpose
+1
+Home (Bahi)
+Today and this month at a glance, recent entries
+2
+Ledger
+Full chronological history, search and filters
+Centre
+Add (+)
+Opens the quick entry sheet. Always one tap away
+3
+Insights
+Graphs and breakdowns for Day, Week, Month, Year, All
+4
+Manage
+Categories, tags, accounts, budgets, settings, export
+4.1 Screen requirements
+Home
+Header: month name and net balance for the month.
+Two summary blocks side by side: Out (oxblood) and In (verdigris).
+A compact seven-day bar strip for the current week.
+The last 10 entries, grouped under the day headers Today, Yesterday and then dates.
+Quick Add sheet
+Opens as a bottom sheet over the current screen, with the numeric keypad already up.
+Out/In segmented switch at the top. Out is the default.
+Large amount field, then a horizontally scrolling row of category chips (most used first), with a final chip "+ New".
+Secondary row: date (defaults to now, one tap for Yesterday), account, tags and note, all collapsed unless needed.
+A single primary Save button. Save and add another is available by long-press.
+Validation: amount must be greater than zero. Everything else is optional or defaulted.
+Ledger
+Entries grouped by day, with a day subtotal on each header.
+Each row: category icon, category name, note preview, tags, amount with sign and colour, and a sync mark if pending.
+Swipe left to delete (with undo), tap to edit.
+Filter bar: date range, category, tag, type (Out, In), amount range, account. A search field covers notes and tags.
+Insights
+Period selector: Day, Week, Month, Year, All. Previous and next arrows plus swipe.
+Summary strip: total Out, total In, Net, and the daily average.
+Primary graph, depending on period (see section 6).
+Category breakdown as a ranked list with proportional bars. A donut is optional and secondary.
+Tapping any bar, point or category drills into the matching entries in the Ledger.
+Toggle: Out, In or Both.
+Manage
+Categories: list with drag-to-reorder, add, edit (name, icon, colour), archive, delete with reassignment. Separate tabs for Expense and Income categories.
+Tags: list with usage totals, rename, merge, delete.
+Accounts (v1.1), Budgets (v1.1), Recurring (v1.1).
+Settings: currency display, week start day (Monday default), month start day (1 to 28, for salary cycles), theme variants, lock, export, sign out, delete account.
+5. Functional requirements
+5.1 Entries
+ID
+Requirement
+FR-01
+The user can create an entry of type Expense or Income with amount, category, date-time, and optional account, tags and note
+FR-02
+Amounts accept up to 2 decimal places and are stored as integer paise
+FR-03
+The date defaults to now and can be backdated or set in the future (future entries are flagged as scheduled)
+FR-04
+Entries can be edited. All affected totals update immediately
+FR-05
+Deletion is a soft delete with a 6-second undo, then permanent after 30 days in a Recently Deleted list
+FR-06
+The last used category and account are remembered per type
+FR-07
+Duplicate protection: an identical entry (same amount, category and minute) shows a gentle confirmation
+5.2 Categories and tags
+ID
+Requirement
+FR-10
+Default expense categories: Grocery, Snacks, Travel, College, Food, Bills, Rent, Health, Shopping, Entertainment, Other
+FR-11
+Default income categories: Pocket Money, Salary, Freelance, Gift, Refund, Other
+FR-12
+The user can add, rename, change icon and colour, reorder, archive and delete categories
+FR-13
+Deleting a used category requires choosing a replacement category, or archiving it. Archived categories remain on old entries and hide from the picker
+FR-14
+Icons come from a fixed in-house line-icon set (about 60 icons). No emoji
+FR-15
+Tags are free text, created inline with #, with autocomplete. Many tags per entry
+FR-16
+Tags can be renamed, merged and deleted. Renaming updates all entries
+5.3 Views and reporting
+ID
+Requirement
+FR-20
+Insights supports Day, Week, Month, Year and All periods
+FR-21
+Totals for Out, In and Net are shown for the selected period
+FR-22
+Category and tag breakdowns are available for any period
+FR-23
+Any chart element drills down to the underlying entries
+FR-24
+Week and month boundaries respect the user's week start and month start settings
+FR-25
+All dates and times use the device time zone (IST by default). Entries store UTC plus the local date key
+5.4 Offline and sync
+ID
+Requirement
+FR-30
+All reads and writes work offline with persistence enabled on every platform
+FR-31
+Pending writes show a subtle sync mark. A global indicator appears only when something has been pending longer than 60 seconds
+FR-32
+On a second device, changes appear within seconds of connectivity
+FR-33
+Each entry carries a client-generated ID, so retries can never create duplicates
+5.5 Account and data
+ID
+Requirement
+FR-40
+Sign-in with Google or phone OTP
+FR-41
+CSV export of all entries or of a filtered range
+FR-42
+The user can permanently delete their account and all data, by a Cloud Function that removes the whole user subtree
+FR-43
+Optional app lock with biometrics or PIN (v1.1)
+6. Graphs
+Charts are plain and exact: no 3D, no animation that delays reading, no decorative gradients. Every chart has labelled axes with Indian-format values, and a text summary for accessibility.
+Period
+Primary graph
+Buckets
+Secondary
+Day
+Horizontal timeline of that day's entries, plus bars by time of day (morning, afternoon, evening, night)
+Entries
+Category list
+Week
+Seven vertical bars, Out and In side by side
+Days
+Category breakdown
+Month
+Daily bars plus a cumulative line for spend, with the budget line if set
+Days
+Category breakdown, top tags
+Year
+Twelve monthly bars, Out and In side by side, with a net line
+Months
+Category trend
+All
+Line graph of monthly Out, In and cumulative Net across the whole history
+Months
+Yearly totals table, top categories ever
+Encoding rules:
+Out is always oxblood, In is always verdigris, Net is always brass. These meanings never change across screens.
+Category colours appear only in breakdowns and never override the Out and In meaning.
+Empty periods show a sober empty state ("Nothing entered for this week"), never a blank chart.
+7. Data and architecture
+7.1 Principles
+All user data lives under users/{uid}. Security rules allow access only when request.auth.uid == uid.
+Money is an integer in paise.
+Every entry carries precomputed date keys so period queries are simple range or equality queries on one indexed field.
+7.2 Collections
+users/{uid}  profile: { currency: "INR", weekStartsOn: 1, monthStartDay: 1, createdAt }users/{uid}/categories/{categoryId}  { name, kind: "expense" | "income", icon, colorToken, order, archived, createdAt }users/{uid}/tags/{tagId}  { name, createdAt }users/{uid}/accounts/{accountId}            (v1.1)  { name, type: "cash" | "bank" | "upi" | "card", openingPaise, archived }users/{uid}/transactions/{txnId}  { type: "expense" | "income" | "transfer",    amountPaise: int,    categoryId, accountId, tagIds: [],    note,    occurredAt: Timestamp,    dayKey: "2026-11-04", weekKey: "2026-W45", monthKey: "2026-11", yearKey: "2026",    createdAt, updatedAt, deletedAt: null | Timestamp }users/{uid}/summaries/{monthKey}  { outPaise, inPaise, byCategory: { categoryId: paise }, byDay: { "01": paise, ... }, updatedAt }
+7.3 Indexes
+transactions: (monthKey, occurredAt desc), (categoryId, occurredAt desc), (tagIds array-contains, occurredAt desc), (deletedAt, occurredAt desc).
+7.4 Summaries and offline-safe totals
+Each create, edit or delete runs as one WriteBatch that writes the transaction and applies FieldValue.increment to the matching month summary. This works offline.
+Edits apply the reverse of the old values and the forward of the new values in the same batch.
+Day, Week and Month views use the cached transactions directly or the summary document. Year and All use only the 12 or N summary documents, so they cost a handful of reads and not thousands.
+A "Rebuild summaries" action (client or Cloud Function) recomputes everything from transactions, as a safety net and for after an import.
+7.5 Security
+Firestore rules: owner-only access, type and range validation on fields, amountPaise must be a positive integer, and unknown fields are rejected.
+App Check is enabled to reduce abuse.
+The Firestore cache is stored in the app's private storage. The optional app lock covers shoulder-surfing.
+No financial data is sent to analytics. Only anonymous usage events are logged.
+7.6 App structure (Flutter)
+Feature-first folders: auth, entries, categories, tags, insights, manage, settings.
+A repository layer wraps Firestore, so UI never touches the database directly. State management with Riverpod.
+A design-token package holds colours, type, spacing and icons, and is the single source of truth for the theme.
+8. Design system: "Ledger of the Night"
+The aim is a gothic account book: heavy, ordered, quiet and dependable. The gothic character comes from palette, type, proportion and ornament used sparingly, and not from horror clichés. It must read as a considered product, not as a template.
+8.1 Principles
+Weight over flash. Dense, solid surfaces, hairline rules, no glow, no blur, no glass effects.
+Ornament is rationed. Decoration appears in at most three places: the wordmark, section dividers and empty states.
+Numbers are sacred. The amount is always the most legible thing on screen.
+Meaning by colour is fixed. See the graph encoding rules.
+No emoji, no stock illustrations, no gradient buttons.
+8.2 Colour tokens
+Token
+Hex
+Use
+obsidian
+#0C0B0D
+App background
+crypt
+#151317
+Cards and sheets
+slab
+#1E1B21
+Raised surfaces, inputs
+iron-line
+#34303A
+Hairline borders and dividers (1 px)
+bone
+#E9E1D1
+Primary text
+ash
+#9A9285
+Secondary text
+brass
+#B4915A
+Primary accent, active states, Net
+oxblood
+#8E1B2B
+Expense (Out)
+oxblood-lit
+#C2394B
+Expense text on dark for contrast
+verdigris
+#4E7A63
+Income (In)
+verdigris-lit
+#7FB08F
+Income text on dark for contrast
+tallow
+#C9A23F
+Warnings (budget near limit)
+A light variant, "Vellum", is offered as an option: parchment background #EFE8D8, ink text #1A171C, same accents adjusted for contrast. Both variants must meet WCAG AA contrast.
+Category colours are a muted set of 12 (rust, ochre, moss, slate, plum, teal, and similar), chosen so none conflicts with oxblood or verdigris.
+8.3 Typography
+Role
+Face
+Notes
+Wordmark only
+A blackletter display face (for example UnifrakturCook)
+Used for "Mere Paise" in the logo and splash only. Never for body or numbers
+Headings
+A high-contrast serif (for example Cormorant Garamond SemiBold, or Cinzel for small-caps labels)
+Screen titles, section heads
+Body and labels
+A sturdy humanist sans (for example Source Sans 3)
+UI text
+Numbers
+A serif or mono with tabular lining figures (for example Spectral or IBM Plex Mono)
+All amounts, so digits align in columns
+Amounts use the ₹ symbol, Indian digit grouping, and a fixed sign: − in oxblood-lit for Out, + in verdigris-lit for In. Sign and colour are both present so the meaning never depends on colour alone.
+8.4 Shape, spacing, motion
+Corner radius 2 to 4 px. No pill-shaped or heavily rounded cards.
+4 px spacing grid. Content padding 16 px.
+Borders: 1 px iron-line. A double-rule divider (two hairlines 3 px apart) marks major sections, in the style of a printed ledger.
+Small pointed-arch and cross-hatch motifs appear only as section dividers, on the splash screen and in empty states.
+Motion is 120 to 200 ms, ease-out, and only to explain a state change (sheet rising, row removed). No bounce, no confetti.
+Haptics: a light tick on save, a double tick on delete.
+8.5 Components
+Amount keypad: large, square keys with hairline borders, with a clear backspace and decimal key.
+Category chips: rectangular, 2 px radius, icon plus label. Selected state is a brass border and a brass icon.
+Entry row: 56 px tall. Left category glyph in a square slab, centre name and note, right the signed amount.
+Segmented Out/In switch: the active segment fills with oxblood or verdigris and re-tints the sheet's header rule.
+Bottom navigation: four items plus a square brass Add button with a plus. The Add button sits in a notch and not in a floating circle.
+Icons: a custom 1.5 px stroke line set with slight sharp corners, drawn to match the type.
+8.6 Avoiding the "vibecoded" look
+Use a real token system, not ad-hoc colours per screen.
+Hand-pick the icon set and type pairing and keep to them. No mixed icon families.
+Keep copy plain and exact. No cheesy slogans, no fake gothic spelling.
+Check every screen against the principle list in 8.1 before it ships.
+Review at real device sizes, with real data, including long names and large amounts.
+9. Non-functional requirements
+Area
+Requirement
+Speed
+Cold start to keypad ready in under 2 s on a mid-range Android. Save feels instant (under 100 ms to UI update)
+Offline
+Full functionality offline, indefinitely
+Reliability
+Crash-free sessions of 99.5% or better
+Scale
+Handles at least 100,000 entries per user with smooth lists (paged queries, 50 per page)
+Accessibility
+WCAG AA contrast, 48 dp minimum touch targets, screen reader labels on all controls, system font scaling up to 200%, never colour alone for meaning
+Privacy
+Owner-only data, no ads, no selling of data, full export and full delete
+Compatibility
+Android 8 and above at launch
+Cost
+Stays within Firestore free or low-cost tier for typical personal use, thanks to summary documents
+10. Success metrics
+Median time from app open to saved entry is under 6 seconds.
+70% or more of users log at least 4 days a week by week 4.
+Fewer than 1 in 200 saved entries are edited for category mistakes (a signal that the picker works).
+Zero reported data loss incidents.
+11. Milestones (indicative, one developer)
+Phase
+Weeks
+Outcome
+1. Foundations
+1 to 2
+Design tokens, icon set, Firebase project, auth, security rules, data layer
+2. Core logging
+3 to 4
+Quick Add, Ledger, edit, delete, undo, offline behaviour
+3. Categories and tags
+5
+Full CRUD, reassignment flow, tag autocomplete
+4. Insights
+6 to 7
+All five periods, graphs, drill-down, summaries
+5. Hardening
+8
+Search and filters, export, accessibility pass, performance pass, closed beta
+6. v1.1
+9 to 12
+Accounts, budgets, recurring, app lock
+12. Risks and mitigations
+Risk
+Mitigation
+Summary documents drift from the transactions
+Batched writes only, plus a rebuild action and a periodic self-check
+Offline edits on two devices conflict
+Last-write-wins is acceptable for one user. Show Updated on another device if detected
+Gothic theme hurts readability
+Blackletter limited to the wordmark, AA contrast enforced, light Vellum variant offered
+Firestore read costs grow
+Paged lists, summaries for Year and All, cached reads
+Users stop logging out of friction
+Obsess over the 3-tap flow, defaults and remembered choices
