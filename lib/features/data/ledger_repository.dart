@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:uuid/uuid.dart';
 import '../../core/utils/date_utils.dart';
@@ -179,6 +180,28 @@ class LedgerRepository {
     await _storage.saveTransactions(_transactions.map((t) => t.toJson()).toList());
   }
 
+  /// Inserts a transaction from cloud sync or updates it if already present.
+  Future<void> upsertTransaction(TransactionEntry entry) async {
+    final index = _transactions.indexWhere((t) => t.id == entry.id);
+    if (index == -1) {
+      _transactions.add(entry);
+      if (!entry.isDeleted) {
+        await _applyTransactionToSummary(entry, isAddition: true);
+      }
+    } else {
+      final old = _transactions[index];
+      if (!old.isDeleted) {
+        await _applyTransactionToSummary(old, isAddition: false);
+      }
+      _transactions[index] = entry;
+      if (!entry.isDeleted) {
+        await _applyTransactionToSummary(entry, isAddition: true);
+      }
+    }
+    _transactions.sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
+    await _storage.saveTransactions(_transactions.map((t) => t.toJson()).toList());
+  }
+
   Future<void> permanentDeleteTransaction(String id) async {
     final index = _transactions.indexWhere((t) => t.id == id);
     if (index == -1) return;
@@ -219,6 +242,17 @@ class LedgerRepository {
       _categories[index] = category;
       await _storage.saveCategories(_categories.map((c) => c.toJson()).toList());
     }
+  }
+
+  /// Inserts a category from cloud sync or updates it if already present.
+  Future<void> upsertCategory(CategoryItem category) async {
+    final index = _categories.indexWhere((c) => c.id == category.id);
+    if (index == -1) {
+      _categories.add(category);
+    } else {
+      _categories[index] = category;
+    }
+    await _storage.saveCategories(_categories.map((c) => c.toJson()).toList());
   }
 
   Future<void> archiveCategory(String categoryId, bool archive) async {
@@ -299,6 +333,17 @@ class LedgerRepository {
       _tags[index] = _tags[index].copyWith(name: clean);
       await _storage.saveTags(_tags.map((t) => t.toJson()).toList());
     }
+  }
+
+  /// Inserts a tag from cloud sync or updates it if already present.
+  Future<void> upsertTag(TagItem tag) async {
+    final index = _tags.indexWhere((t) => t.id == tag.id);
+    if (index == -1) {
+      _tags.add(tag);
+    } else {
+      _tags[index] = tag;
+    }
+    await _storage.saveTags(_tags.map((t) => t.toJson()).toList());
   }
 
   Future<void> mergeTags({required String sourceTagId, required String targetTagId}) async {
@@ -410,52 +455,109 @@ class LedgerRepository {
 
   String? getLastUsedCategory(String type) => _storage.getLastUsedCategory(type);
 
-  // --- CSV Export ---
+  // --- CSV & Backup Export ---
 
-  Future<String> exportCsvFile() async {
+  Future<String> exportCsvFile({List<TransactionEntry>? subset}) async {
+    final list = subset ?? activeTransactions;
     final rows = <List<dynamic>>[];
-    // Header
+
+    // Professional Column Headers
     rows.add([
       'Date',
       'Time',
       'Type',
       'Category',
-      'Amount (INR)',
+      'Amount (₹)',
+      'Signed Amount',
       'Amount (Paise)',
       'Note',
       'Tags',
-      'Account',
-      'ID',
+      'Transaction ID',
     ]);
 
     final categoryMap = {for (var c in _categories) c.id: c.name};
     final tagMap = {for (var t in _tags) t.id: t.name};
 
-    for (final t in activeTransactions) {
-      final catName = categoryMap[t.categoryId] ?? 'Unknown';
-      final tagNames = t.tagIds.map((id) => tagMap[id] ?? id).join(', ');
+    for (final t in list) {
+      final catName = categoryMap[t.categoryId] ?? 'General';
+      final tagNames = t.tagIds.map((id) => tagMap[id] != null ? '#${tagMap[id]}' : id).join(' ');
       final rupees = (t.amountPaise / 100.0).toStringAsFixed(2);
+      final signedAmount = t.isExpense ? '-$rupees' : '+$rupees';
+      final typeLabel = t.isExpense ? 'Spent' : 'Received';
+
+      final dateStr = LedgerDateUtils.dayKey(t.occurredAt);
+      final timeStr = LedgerDateUtils.formatTime(t.occurredAt);
 
       rows.add([
-        LedgerDateUtils.dayKey(t.occurredAt),
-        LedgerDateUtils.formatTime(t.occurredAt),
-        t.type.toUpperCase(),
+        dateStr,
+        timeStr,
+        typeLabel,
         catName,
         rupees,
+        signedAmount,
         t.amountPaise,
         t.note,
         tagNames,
-        t.accountId ?? '',
         t.id,
       ]);
     }
 
     final csvString = _convertToCsv(rows);
     final storagePath = await _storage.getAppStoragePath();
-    final filePath = '$storagePath/mere_paise_export_${DateTime.now().millisecondsSinceEpoch}.csv';
+    final now = DateTime.now();
+    final dateSuffix = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}_${now.hour.toString().padLeft(2, '0')}${now.minute.toString().padLeft(2, '0')}';
+    final filePath = '$storagePath/mere_paise_ledger_$dateSuffix.csv';
     final file = File(filePath);
     await file.writeAsString(csvString);
     return filePath;
+  }
+
+  /// Exports a complete offline JSON backup of all ledger data.
+  Future<String> exportJsonBackup() async {
+    final data = {
+      'app': 'Mere Paise',
+      'version': '1.0.1',
+      'exportedAt': DateTime.now().toIso8601String(),
+      'settings': _settings.toJson(),
+      'categories': _categories.map((c) => c.toJson()).toList(),
+      'tags': _tags.map((t) => t.toJson()).toList(),
+      'transactions': _transactions.map((t) => t.toJson()).toList(),
+    };
+
+    final raw = const JsonEncoder.withIndent('  ').convert(data);
+    final storagePath = await _storage.getAppStoragePath();
+    final now = DateTime.now();
+    final dateSuffix = '${now.year}${now.month.toString().padLeft(2, '0')}${now.day.toString().padLeft(2, '0')}';
+    final filePath = '$storagePath/mere_paise_backup_$dateSuffix.json';
+    final file = File(filePath);
+    await file.writeAsString(raw);
+    return filePath;
+  }
+
+  /// Restores all data from a JSON backup string. Returns count of restored transactions.
+  Future<int> restoreJsonBackup(String jsonContent) async {
+    final decoded = jsonDecode(jsonContent) as Map<String, dynamic>;
+    if (decoded.containsKey('categories')) {
+      final catList = (decoded['categories'] as List).map((e) => CategoryItem.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+      _categories = catList;
+      await _storage.saveCategories(_categories.map((c) => c.toJson()).toList());
+    }
+    if (decoded.containsKey('tags')) {
+      final tagList = (decoded['tags'] as List).map((e) => TagItem.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+      _tags = tagList;
+      await _storage.saveTags(_tags.map((t) => t.toJson()).toList());
+    }
+    if (decoded.containsKey('transactions')) {
+      final txnList = (decoded['transactions'] as List).map((e) => TransactionEntry.fromJson(Map<String, dynamic>.from(e as Map))).toList();
+      _transactions = txnList;
+      await _storage.saveTransactions(_transactions.map((t) => t.toJson()).toList());
+    }
+    if (decoded.containsKey('settings')) {
+      _settings = UserSettings.fromJson(Map<String, dynamic>.from(decoded['settings'] as Map));
+      await _storage.saveSettings(_settings.toJson());
+    }
+    await rebuildSummaries();
+    return _transactions.where((t) => !t.isDeleted).length;
   }
 
   String _convertToCsv(List<List<dynamic>> rows) {

@@ -1,9 +1,6 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../core/utils/date_utils.dart';
-import '../auth/auth_service.dart';
-import '../data/firestore_sync_service.dart';
 import '../data/ledger_repository.dart';
 import '../data/storage_service.dart';
 import '../models/category_item.dart';
@@ -19,23 +16,6 @@ final storageServiceProvider = Provider<StorageService>((ref) {
 
 final ledgerRepositoryProvider = Provider<LedgerRepository>((ref) {
   throw UnimplementedError('LedgerRepository must be initialized in main');
-});
-
-// Auth & Firestore Sync providers
-final authServiceProvider = Provider<AuthService>((ref) {
-  return AuthService();
-});
-
-final authStateProvider = StreamProvider<User?>((ref) {
-  return ref.watch(authServiceProvider).authStateChanges;
-});
-
-final firestoreSyncServiceProvider = Provider<FirestoreSyncService>((ref) {
-  final repo = ref.watch(ledgerRepositoryProvider);
-  final syncService = FirestoreSyncService(repo);
-  syncService.init();
-  ref.onDispose(() => syncService.dispose());
-  return syncService;
 });
 
 // Settings Provider
@@ -78,6 +58,10 @@ class CategoriesNotifier extends Notifier<List<CategoryItem>> {
   @override
   List<CategoryItem> build() {
     return ref.watch(ledgerRepositoryProvider).categories;
+  }
+
+  void refresh() {
+    state = ref.read(ledgerRepositoryProvider).categories;
   }
 
   Future<CategoryItem> addCategory({
@@ -137,6 +121,10 @@ class TagsNotifier extends Notifier<List<TagItem>> {
   @override
   List<TagItem> build() {
     return ref.watch(ledgerRepositoryProvider).tags;
+  }
+
+  void refresh() {
+    state = ref.read(ledgerRepositoryProvider).tags;
   }
 
   Future<TagItem> getOrCreateTag(String name) async {
@@ -250,7 +238,7 @@ final currentMonthSummaryProvider = Provider<MonthSummary>((ref) {
   return summaries[currentKey] ?? MonthSummary.empty(currentKey);
 });
 
-// Sort options for Ledger
+// Ledger Sorting Options
 enum LedgerSortOption {
   newestFirst,
   oldestFirst,
@@ -258,26 +246,25 @@ enum LedgerSortOption {
   amountLowToHigh,
 }
 
-// Filter state for Ledger screen
+// Filter State Model
 class LedgerFilterState {
-  final String searchQuery;
-  final String? type;
+  final String? type; // 'expense' or 'income'
   final String? categoryId;
   final String? tagId;
   final DateTimeRange? dateRange;
+  final String searchQuery;
   final LedgerSortOption sortOption;
 
   const LedgerFilterState({
-    this.searchQuery = '',
     this.type,
     this.categoryId,
     this.tagId,
     this.dateRange,
+    this.searchQuery = '',
     this.sortOption = LedgerSortOption.newestFirst,
   });
 
   bool get hasActiveFilter =>
-      searchQuery.isNotEmpty ||
       type != null ||
       categoryId != null ||
       tagId != null ||
@@ -286,7 +273,6 @@ class LedgerFilterState {
 
   int get activeFilterCount {
     int count = 0;
-    if (searchQuery.isNotEmpty) count++;
     if (type != null) count++;
     if (categoryId != null) count++;
     if (tagId != null) count++;
@@ -296,7 +282,6 @@ class LedgerFilterState {
   }
 
   LedgerFilterState copyWith({
-    String? searchQuery,
     String? type,
     bool clearType = false,
     String? categoryId,
@@ -305,14 +290,15 @@ class LedgerFilterState {
     bool clearTag = false,
     DateTimeRange? dateRange,
     bool clearDateRange = false,
+    String? searchQuery,
     LedgerSortOption? sortOption,
   }) {
     return LedgerFilterState(
-      searchQuery: searchQuery ?? this.searchQuery,
       type: clearType ? null : (type ?? this.type),
       categoryId: clearCategory ? null : (categoryId ?? this.categoryId),
       tagId: clearTag ? null : (tagId ?? this.tagId),
       dateRange: clearDateRange ? null : (dateRange ?? this.dateRange),
+      searchQuery: searchQuery ?? this.searchQuery,
       sortOption: sortOption ?? this.sortOption,
     );
   }
@@ -322,41 +308,55 @@ class LedgerFilterNotifier extends Notifier<LedgerFilterState> {
   @override
   LedgerFilterState build() => const LedgerFilterState();
 
-  void setFilter(LedgerFilterState filter) => state = filter;
-  void update(LedgerFilterState Function(LedgerFilterState) updater) => state = updater(state);
+  void setFilter(LedgerFilterState newState) {
+    state = newState;
+  }
+
+  void reset() {
+    state = const LedgerFilterState();
+  }
 }
 
 final ledgerFilterProvider = NotifierProvider<LedgerFilterNotifier, LedgerFilterState>(LedgerFilterNotifier.new);
 
-// Filtered Transactions
+// Filtered Transactions Computed Provider
 final filteredTransactionsProvider = Provider<List<TransactionEntry>>((ref) {
-  final list = ref.watch(transactionsProvider);
+  final allTxns = ref.watch(transactionsProvider);
   final filter = ref.watch(ledgerFilterProvider);
 
-  final filtered = list.where((t) {
+  final filtered = allTxns.where((t) {
+    // 1. Type
     if (filter.type != null && t.type != filter.type) return false;
+
+    // 2. Category
     if (filter.categoryId != null && t.categoryId != filter.categoryId) return false;
+
+    // 3. Tag
     if (filter.tagId != null && !t.tagIds.contains(filter.tagId)) return false;
+
+    // 4. Date Range
     if (filter.dateRange != null) {
-      final occurred = t.occurredAt;
-      final start = filter.dateRange!.start;
-      final end = filter.dateRange!.end.add(const Duration(days: 1));
-      if (occurred.isBefore(start) || occurred.isAfter(end)) return false;
+      final start = DateTime(filter.dateRange!.start.year, filter.dateRange!.start.month, filter.dateRange!.start.day);
+      final end = DateTime(filter.dateRange!.end.year, filter.dateRange!.end.month, filter.dateRange!.end.day, 23, 59, 59);
+      if (t.occurredAt.isBefore(start) || t.occurredAt.isAfter(end)) return false;
     }
+
+    // 5. Search Query
     if (filter.searchQuery.isNotEmpty) {
       final q = filter.searchQuery.toLowerCase();
       final matchesNote = t.note.toLowerCase().contains(q);
-      final categories = ref.watch(categoriesProvider);
-      final catName = categories.cast<CategoryItem?>().firstWhere(
+      final cat = ref.read(categoriesProvider).cast<CategoryItem?>().firstWhere(
         (c) => c?.id == t.categoryId,
         orElse: () => null,
-      )?.name.toLowerCase() ?? '';
-      final matchesCat = catName.contains(q);
-      if (!matchesNote && !matchesCat) return false;
+      );
+      final matchesCategory = cat?.name.toLowerCase().contains(q) ?? false;
+      if (!matchesNote && !matchesCategory) return false;
     }
+
     return true;
   }).toList();
 
+  // Apply sorting
   switch (filter.sortOption) {
     case LedgerSortOption.newestFirst:
       filtered.sort((a, b) => b.occurredAt.compareTo(a.occurredAt));

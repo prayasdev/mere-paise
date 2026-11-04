@@ -1,5 +1,3 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,7 +12,6 @@ import 'features/insights/insights_screen.dart';
 import 'features/ledger/ledger_screen.dart';
 import 'features/manage/manage_screen.dart';
 import 'features/providers/ledger_providers.dart';
-import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -28,18 +25,6 @@ void main() async {
       systemNavigationBarIconBrightness: Brightness.light,
     ),
   );
-
-  // Initialize Firebase with offline persistence
-  try {
-    await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.currentPlatform,
-    );
-    FirebaseFirestore.instance.settings = const Settings(
-      persistenceEnabled: true,
-    );
-  } catch (e) {
-    debugPrint('Firebase init fallback: $e');
-  }
 
   final storageService = StorageService();
   final repository = LedgerRepository(storageService);
@@ -81,14 +66,6 @@ class MainNavigationScaffold extends ConsumerStatefulWidget {
 
 class _MainNavigationScaffoldState extends ConsumerState<MainNavigationScaffold> {
   int _currentIndex = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      ref.read(firestoreSyncServiceProvider);
-    });
-  }
 
   void _onDrillDown(String? categoryId, String? type) {
     ref.read(ledgerFilterProvider.notifier).setFilter(LedgerFilterState(

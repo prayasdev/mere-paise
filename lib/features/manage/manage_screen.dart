@@ -22,7 +22,6 @@ class ManageScreen extends ConsumerWidget {
     final txns = ref.watch(transactionsProvider);
     final settings = ref.watch(settingsProvider);
     final repo = ref.watch(ledgerRepositoryProvider);
-    final authState = ref.watch(authStateProvider);
 
     final expenseCategories = allCategories.where((c) => c.kind == 'expense' && !c.archived).toList();
     final incomeCategories = allCategories.where((c) => c.kind == 'income' && !c.archived).toList();
@@ -58,144 +57,77 @@ class ManageScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // -------------------------------------------------------------
-            // SECTION 1: Google Account & Cloud Backup
+            // SECTION 1: Offline Sovereignty & Privacy
             // -------------------------------------------------------------
             Text(
-              'ACCOUNT & CLOUD BACKUP',
+              'OFFLINE SOVEREIGNTY & PRIVACY',
               style: AppTypography.labelGothic(context: context, fontSize: 11),
             ),
             const SizedBox(height: 8),
 
-            authState.when(
-              data: (user) {
-                if (user != null) {
-                  return GothicCard(
-                    padding: const EdgeInsets.all(14),
-                    child: Row(
-                      children: [
-                        CircleAvatar(
-                          radius: 20,
-                          backgroundColor: AppColors.elevated(context),
-                          backgroundImage: user.photoURL != null ? NetworkImage(user.photoURL!) : null,
-                          child: user.photoURL == null
-                              ? Text(
-                                  (user.displayName ?? user.email ?? 'U').substring(0, 1).toUpperCase(),
-                                  style: AppTypography.labelGothic(color: AppColors.brass, fontSize: 14),
-                                )
-                              : null,
-                        ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                user.displayName ?? 'Google User',
-                                style: AppTypography.bodyLarge(context: context),
-                              ),
-                              Text(
-                                user.email ?? '',
-                                style: AppTypography.bodySmall(context: context),
-                              ),
-                              const SizedBox(height: 4),
-                              Row(
-                                children: [
-                                  Container(
-                                    width: 7,
-                                    height: 7,
-                                    decoration: const BoxDecoration(
-                                      color: AppColors.verdigrisLit,
-                                      shape: BoxShape.circle,
-                                    ),
-                                  ),
-                                  const SizedBox(width: 6),
-                                  Text(
-                                    'Cloud Sync Connected',
-                                    style: AppTypography.labelGothic(
-                                      color: isDark ? AppColors.verdigrisLit : AppColors.verdigris,
-                                      fontSize: 10,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ],
-                          ),
-                        ),
-                        OutlinedButton(
-                          style: OutlinedButton.styleFrom(
-                            side: BorderSide(color: AppColors.border(context)),
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                          ),
-                          onPressed: () async {
-                            LedgerHaptics.tick();
-                            await ref.read(authServiceProvider).signOut();
-                          },
-                          child: Text(
-                            'Sign Out',
-                            style: AppTypography.labelGothic(color: AppColors.expense(context), fontSize: 10),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
-                return GothicCard(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+            GothicCard(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
-                      Row(
-                        children: [
-                          const Icon(Icons.cloud_sync_outlined, color: AppColors.brass, size: 22),
-                          const SizedBox(width: 10),
-                          Text('Google Cloud Sync', style: AppTypography.headingSmall(context: context)),
-                        ],
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        'Authenticate with your Google account to automatically mirror and restore your entries across devices with Firestore.',
-                        style: AppTypography.bodyMedium(context: context),
-                      ),
-                      const SizedBox(height: 12),
-                      ElevatedButton.icon(
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.brass,
-                          foregroundColor: isDark ? AppColors.obsidian : AppColors.vellumInk,
-                          minimumSize: const Size.fromHeight(44),
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.brass.withValues(alpha: 0.15),
+                          shape: BoxShape.circle,
                         ),
-                        onPressed: () async {
-                          try {
-                            LedgerHaptics.tick();
-                            final cred = await ref.read(authServiceProvider).signInWithGoogle();
-                            if (cred != null && context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Connected as ${cred.user?.displayName ?? 'User'}')),
-                              );
-                            }
-                          } catch (e) {
-                            if (context.mounted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Sign-in error: $e')),
-                              );
-                            }
-                          }
-                        },
-                        icon: const Icon(Icons.login, size: 18),
-                        label: Text(
-                          'SIGN IN WITH GOOGLE',
-                          style: AppTypography.labelGothic(
-                            color: isDark ? AppColors.obsidian : AppColors.vellumInk,
-                            fontSize: 12,
-                          ),
+                        child: const Icon(Icons.shield_outlined, color: AppColors.brass, size: 22),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '100% Offline & Private',
+                              style: AppTypography.headingSmall(context: context),
+                            ),
+                            Text(
+                              'Zero cloud servers • Zero trackers • Zero network calls',
+                              style: AppTypography.bodySmall(
+                                color: isDark ? AppColors.verdigrisLit : AppColors.verdigris,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
                   ),
-                );
-              },
-              loading: () => const Center(child: CircularProgressIndicator()),
-              error: (_, _) => const SizedBox.shrink(),
+                  const SizedBox(height: 12),
+                  const GothicDivider(),
+                  const SizedBox(height: 10),
+                  Text(
+                    'All your financial data, accounts, categories, and tags are stored strictly in your device\'s local storage with solid integer paise arithmetic. You own and control 100% of your data.',
+                    style: AppTypography.bodyMedium(context: context),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: AppColors.elevated(context),
+                      borderRadius: BorderRadius.circular(6),
+                      border: Border.all(color: AppColors.border(context)),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.inventory_2_outlined, size: 16, color: AppColors.textSecondary(context)),
+                        const SizedBox(width: 8),
+                        Text(
+                          '${txns.length} transactions stored safely on this device',
+                          style: AppTypography.labelGothic(context: context, fontSize: 11),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
 
             const SizedBox(height: 20),
@@ -472,39 +404,114 @@ class ManageScreen extends ConsumerWidget {
             ),
             const SizedBox(height: 8),
 
-            // Export CSV
+            // Export CSV Card
             GothicCard(
-              padding: const EdgeInsets.all(14),
-              child: Row(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Icon(Icons.file_download_outlined, color: AppColors.brass, size: 22),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('Export Ledger (CSV)', style: AppTypography.bodyLarge(context: context)),
-                        Text(
-                          'Download all transactions formatted with standard Indian Rupee notation',
-                          style: AppTypography.bodySmall(context: context),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.brass.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                      ],
-                    ),
+                        child: const Icon(Icons.table_chart_outlined, color: AppColors.brass, size: 24),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Export Ledger (CSV)', style: AppTypography.headingSmall(context: context)),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Pristine spreadsheet export formatted with standard Indian Rupee notation (₹), signed amounts (+/-), category, and tags.',
+                              style: AppTypography.bodySmall(context: context),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
-                  ElevatedButton(
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: AppColors.brass,
-                      foregroundColor: isDark ? AppColors.obsidian : AppColors.vellumInk,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                      minimumSize: Size.zero,
-                    ),
-                    onPressed: () async {
-                      LedgerHaptics.tick();
-                      final filePath = await repo.exportCsvFile();
-                      // ignore: deprecated_member_use
-                      await Share.shareXFiles([XFile(filePath)], text: 'Mere Paise Transaction Ledger Export');
-                    },
-                    child: const Text('Export'),
+                  const SizedBox(height: 14),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          style: OutlinedButton.styleFrom(
+                            side: BorderSide(color: AppColors.brass.withValues(alpha: 0.5)),
+                            padding: const EdgeInsets.symmetric(vertical: 10),
+                          ),
+                          onPressed: txns.isEmpty
+                              ? null
+                              : () async {
+                                  LedgerHaptics.tick();
+                                  try {
+                                    final filePath = await repo.exportCsvFile();
+                                    // ignore: deprecated_member_use
+                                    await Share.shareXFiles(
+                                      [XFile(filePath)],
+                                      text: 'Mere Paise - Offline Ledger Export (${txns.length} records)',
+                                    );
+                                  } catch (e) {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context).showSnackBar(
+                                        SnackBar(content: Text('Export failed: $e')),
+                                      );
+                                    }
+                                  }
+                                },
+                          icon: const Icon(Icons.share_outlined, size: 16, color: AppColors.brass),
+                          label: Text(
+                            'SHARE CSV (${txns.length})',
+                            style: AppTypography.labelGothic(color: AppColors.brass, fontSize: 11),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      ElevatedButton.icon(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppColors.brass,
+                          foregroundColor: isDark ? AppColors.obsidian : AppColors.vellumInk,
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                        ),
+                        onPressed: txns.isEmpty
+                            ? null
+                            : () async {
+                                LedgerHaptics.tick();
+                                try {
+                                  final filePath = await repo.exportCsvFile();
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text('CSV saved to:\n$filePath'),
+                                        backgroundColor: AppColors.verdigris,
+                                        duration: const Duration(seconds: 4),
+                                      ),
+                                    );
+                                  }
+                                } catch (e) {
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(content: Text('Export failed: $e')),
+                                    );
+                                  }
+                                }
+                              },
+                        icon: const Icon(Icons.download_rounded, size: 16),
+                        label: Text(
+                          'SAVE FILE',
+                          style: AppTypography.labelGothic(
+                            color: isDark ? AppColors.obsidian : AppColors.vellumInk,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -653,53 +660,46 @@ class ManageScreen extends ConsumerWidget {
                   ),
                   const SizedBox(height: 14),
                   const GothicDivider(),
-                  const SizedBox(height: 10),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Solid integer paise arithmetic • Local-first',
-                        style: AppTypography.bodySmall(color: AppColors.textTertiary(context)),
-                      ),
-                      InkWell(
-                        onTap: () async {
-                          final url = Uri.parse('https://github.com/prayasdev');
-                          try {
-                            await launchUrl(url, mode: LaunchMode.externalApplication);
-                          } catch (e) {
-                            debugPrint('Could not launch dev link: $e');
-                          }
-                        },
-                        borderRadius: BorderRadius.circular(4),
-                        child: Padding(
-                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              Text(
-                                'Made with ',
-                                style: AppTypography.bodySmall(context: context),
+                  const SizedBox(height: 12),
+                  Center(
+                    child: InkWell(
+                      onTap: () async {
+                        final url = Uri.parse('https://github.com/prayasdev');
+                        try {
+                          await launchUrl(url, mode: LaunchMode.externalApplication);
+                        } catch (e) {
+                          debugPrint('Could not launch dev link: $e');
+                        }
+                      },
+                      borderRadius: BorderRadius.circular(4),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              'Made with ',
+                              style: AppTypography.bodyMedium(context: context),
+                            ),
+                            const Icon(Icons.favorite, size: 14, color: AppColors.oxbloodLit),
+                            Text(
+                              ' by ',
+                              style: AppTypography.bodyMedium(context: context),
+                            ),
+                            Text(
+                              'prayasdev',
+                              style: AppTypography.bodyMedium(
+                                color: AppColors.brass,
+                              ).copyWith(
+                                fontWeight: FontWeight.bold,
+                                decoration: TextDecoration.underline,
+                                decorationColor: AppColors.brass,
                               ),
-                              const Icon(Icons.favorite, size: 12, color: AppColors.oxbloodLit),
-                              Text(
-                                ' by ',
-                                style: AppTypography.bodySmall(context: context),
-                              ),
-                              Text(
-                                'prayasdev',
-                                style: AppTypography.bodySmall(
-                                  color: AppColors.brass,
-                                ).copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  decoration: TextDecoration.underline,
-                                  decorationColor: AppColors.brass,
-                                ),
-                              ),
-                            ],
-                          ),
+                            ),
+                          ],
                         ),
                       ),
-                    ],
+                    ),
                   ),
                 ],
               ),

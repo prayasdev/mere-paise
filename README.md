@@ -10,7 +10,7 @@
 [![Author](https://img.shields.io/badge/Made%20by-prayasdev-8E1B2B?logo=github&logoColor=white)](https://github.com/prayasdev)
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.x-0175C2?logo=dart&logoColor=white)](https://dart.dev)
-[![Firebase](https://img.shields.io/badge/Firebase-Firestore%20Offline-FFCA28?logo=firebase&logoColor=black)](https://firebase.google.com)
+[![Offline](https://img.shields.io/badge/Architecture-100%25%20Offline-4E7A63)](https://github.com/prayasdev/mere-paise)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 [![Platform](https://img.shields.io/badge/Platform-Android-3DDC84?logo=android&logoColor=white)](https://android.com)
 
@@ -63,10 +63,10 @@ Instead of playful, gamified, or bloated finance apps, Mere Paise embraces a got
 * **Safe Deletion with Reassignment:** Deleting a category prompts reassigning its existing transactions to another category or archiving it, ensuring historic records are never orphaned.
 * **Tag Control:** View usage frequency, rename, merge, or delete tags across all entries.
 
-### 🛡️ Offline-First Architecture & Cloud Sync
-* **Immediate local responsiveness:** Powered by persistent local cache and reactive Riverpod state.
-* **Background synchronization:** Automatic synchronization with Cloud Firestore when network connectivity is available.
-* **Precomputed monthly summaries:** Maintains lightweight summary documents updated via batched writes (`FieldValue.increment`), keeping dashboard lookups and graph computations near-instantaneous while minimizing Firestore reads.
+### 🛡️ 100% Offline Sovereignty & Privacy
+* **Zero cloud clutter:** No servers, no accounts, and no network dependencies. Every rupee is stored locally on-device.
+* **Immediate local responsiveness:** Powered by SQLite/persistent device cache and reactive Riverpod state.
+* **Pristine CSV & JSON Exports:** One-tap export to formatted CSV spreadsheets with Indian Rupee formatting (`₹`), signed amounts (`+`/`-`), category mappings, notes, and tags. Full JSON backup also supported.
 
 ### 🎨 Themes & Preferences
 * **Gothic Dark ("Obsidian"):** High-contrast dark theme with `#0C0B0D` background.
@@ -114,16 +114,14 @@ lib/
 │   ├── utils/            # CurrencyFormatter (paise logic), DateUtils, Haptics
 │   └── widgets/          # GothicCard, GothicDivider, GothicEmptyState
 ├── features/
-│   ├── auth/             # Firebase Authentication & Google Sign-In
-│   ├── data/             # StorageService, LedgerRepository, FirestoreSyncService
+│   ├── data/             # StorageService, LedgerRepository (CSV/JSON Export)
 │   ├── entries/          # QuickAddSheet, Keypad, transaction form components
-│   ├── home/             # HomeScreen (Bahi), summary cards, 7-day strip
+│   ├── home/             # HomeScreen (Home), summary cards, 7-day strip
 │   ├── insights/         # InsightsScreen, Day/Week/Month/Year/All graphs
 │   ├── ledger/           # LedgerScreen, search & filter bars, entry rows
 │   ├── manage/           # CategoriesScreen, Tag management, Settings, Export
 │   ├── models/           # TransactionEntry, CategoryItem, TagItem, MonthSummary
 │   └── providers/        # Riverpod StateNotifiers & computed providers
-├── firebase_options.dart # Generated Firebase configuration
 └── main.dart             # App entry point & bottom navigation scaffold
 ```
 
@@ -147,7 +145,6 @@ users/{uid}/
 * [Flutter SDK](https://docs.flutter.dev/get-started/install) (version `>= 3.13.4` or Flutter 3.24+)
 * [Dart SDK](https://dart.dev/get-dart) (`^3.13.4`)
 * Android SDK / Android Studio configured with API level 26+ (Android 8.0+)
-* A configured [Firebase project](https://console.firebase.google.com/) with Cloud Firestore and Authentication enabled
 
 ### Installation & Setup
 
@@ -162,20 +159,12 @@ users/{uid}/
    flutter pub get
    ```
 
-3. **Configure Firebase:**
-   Ensure `google-services.json` is placed in `android/app/` (or run `flutterfire configure`).
-
-4. **Deploy Firestore Security Rules:**
-   ```bash
-   firebase deploy --only firestore:rules
-   ```
-
-5. **Run on an Android device or emulator:**
+3. **Run on an Android device or emulator:**
    ```bash
    flutter run
    ```
 
-6. **Build release APK:**
+4. **Build release APK:**
    ```bash
    flutter build apk --release
    ```

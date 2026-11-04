@@ -40,6 +40,8 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
   final TextEditingController _tagController = TextEditingController();
   final List<String> _selectedTagNames = [];
   bool _isDetailsExpanded = false;
+  String? _errorMessage;
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -98,10 +100,14 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
   void dispose() {
     _noteController.dispose();
     _tagController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
   void _onKeypadTap(String value) {
+    if (_errorMessage != null) {
+      setState(() => _errorMessage = null);
+    }
     setState(() {
       if (value == 'BACK') {
         if (_amountBuffer.isNotEmpty) {
@@ -131,6 +137,7 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
   void _switchType(String newType) {
     if (_type == newType) return;
     setState(() {
+      _errorMessage = null;
       _type = newType;
       final categories = ref.read(categoriesProvider);
       final repo = ref.read(ledgerRepositoryProvider);
@@ -149,16 +156,32 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
   Future<void> _handleSave({bool addAnother = false}) async {
     final paise = CurrencyFormatter.parseToPaise(_amountBuffer);
     if (paise <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter an amount greater than zero.')),
-      );
+      setState(() {
+        _errorMessage = 'Please enter an amount greater than zero.';
+      });
+      LedgerHaptics.doubleTick();
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0.0,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
+      }
       return;
     }
 
     if (_selectedCategory == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please select a category.')),
-      );
+      setState(() {
+        _errorMessage = 'Please select a category.';
+      });
+      LedgerHaptics.doubleTick();
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          0.0,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
+      }
       return;
     }
 
@@ -243,6 +266,68 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
     }
   }
 
+  Future<void> _confirmDeleteEntry() async {
+    if (widget.initialEntry == null) return;
+    final entry = widget.initialEntry!;
+    final amountText = CurrencyFormatter.formatPaise(entry.amountPaise);
+    final catName = _selectedCategory?.name ?? 'entry';
+    final messenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.surface(context),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+          side: BorderSide(color: AppColors.border(context)),
+        ),
+        title: Text('Delete Entry?', style: AppTypography.headingMedium(context: context)),
+        content: Text(
+          'Are you sure you want to delete this $amountText $catName transaction? You can undo this action within 6 seconds.',
+          style: AppTypography.bodyMedium(context: context),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: Text('Cancel', style: AppTypography.labelGothic(color: AppColors.textSecondary(context))),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.oxblood,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true && mounted) {
+      LedgerHaptics.doubleTick();
+      final txnNotifier = ref.read(transactionsProvider.notifier);
+      navigator.pop();
+
+      final deleted = await txnNotifier.softDelete(entry.id);
+      if (deleted != null) {
+        messenger.showSnackBar(
+          SnackBar(
+            content: Text('Entry removed ($amountText)'),
+            duration: const Duration(seconds: 6),
+            action: SnackBarAction(
+              label: 'UNDO',
+              textColor: AppColors.brass,
+              onPressed: () {
+                txnNotifier.restore(entry.id);
+              },
+            ),
+          ),
+        );
+      }
+    }
+  }
+
   void _addTag(String rawTag) {
     final clean = rawTag.trim().replaceAll('#', '').toLowerCase();
     if (clean.isNotEmpty && !_selectedTagNames.contains(clean)) {
@@ -283,15 +368,85 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
       ),
       child: SafeArea(
         child: SingleChildScrollView(
+          controller: _scrollController,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               // Tint bar
               Container(height: 3, color: headerTint),
 
+              // Header bar with Title, Delete (if editing), and Close
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 6, 8, 2),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      widget.initialEntry != null ? 'EDIT ENTRY' : 'NEW ENTRY',
+                      style: AppTypography.labelGothic(context: context, fontSize: 11),
+                    ),
+                    Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (widget.initialEntry != null)
+                          IconButton(
+                            icon: const Icon(Icons.delete_outline, color: AppColors.oxbloodLit, size: 20),
+                            tooltip: 'Delete Entry',
+                            visualDensity: VisualDensity.compact,
+                            onPressed: _confirmDeleteEntry,
+                          ),
+                        IconButton(
+                          icon: Icon(Icons.close, color: AppColors.textSecondary(context), size: 20),
+                          tooltip: 'Close',
+                          visualDensity: VisualDensity.compact,
+                          onPressed: () => Navigator.of(context).pop(),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              // Prominent Error Banner on top (above keypad & inputs)
+              if (_errorMessage != null)
+                AnimatedContainer(
+                  duration: const Duration(milliseconds: 250),
+                  curve: Curves.easeOut,
+                  width: double.infinity,
+                  margin: const EdgeInsets.fromLTRB(16, 4, 16, 6),
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  decoration: BoxDecoration(
+                    color: AppColors.oxblood.withValues(alpha: 0.18),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: AppColors.oxbloodLit, width: 1.2),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.error_outline, size: 18, color: AppColors.oxbloodLit),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _errorMessage!,
+                          style: AppTypography.bodySmall(color: AppColors.oxbloodLit).copyWith(
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ),
+                      InkWell(
+                        onTap: () => setState(() => _errorMessage = null),
+                        borderRadius: BorderRadius.circular(12),
+                        child: const Padding(
+                          padding: EdgeInsets.all(2),
+                          child: Icon(Icons.close, size: 16, color: AppColors.oxbloodLit),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+
               // Segmented Out / In Switch
               Padding(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                padding: const EdgeInsets.fromLTRB(16, 6, 16, 8),
                 child: Row(
                   children: [
                     Expanded(
@@ -340,7 +495,10 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
                     if (_amountBuffer.isNotEmpty)
                       IconButton(
                         icon: Icon(Icons.close, color: AppColors.textSecondary(context), size: 20),
-                        onPressed: () => setState(() => _amountBuffer = ''),
+                        onPressed: () => setState(() {
+                          _amountBuffer = '';
+                          _errorMessage = null;
+                        }),
                       ),
                   ],
                 ),
@@ -381,7 +539,10 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
 
                     return InkWell(
                       onTap: () {
-                        setState(() => _selectedCategory = cat);
+                        setState(() {
+                          _selectedCategory = cat;
+                          _errorMessage = null;
+                        });
                         LedgerHaptics.tick();
                       },
                       borderRadius: BorderRadius.circular(8),
@@ -599,40 +760,88 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
 
               const SizedBox(height: 10),
 
-              // Save Action Button
+              // Save / Update / Delete Action Buttons
               Padding(
                 padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: GestureDetector(
-                        onLongPress: () => _handleSave(addAnother: true),
-                        child: ElevatedButton(
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppColors.brass,
-                            foregroundColor: isDark ? AppColors.obsidian : AppColors.vellumInk,
-                            minimumSize: const Size.fromHeight(48),
+                child: widget.initialEntry != null
+                    ? Row(
+                        children: [
+                          Expanded(
+                            flex: 2,
+                            child: OutlinedButton.icon(
+                              style: OutlinedButton.styleFrom(
+                                side: BorderSide(color: AppColors.oxbloodLit.withValues(alpha: 0.7), width: 1.2),
+                                foregroundColor: AppColors.oxbloodLit,
+                                minimumSize: const Size.fromHeight(48),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                              ),
+                              onPressed: _confirmDeleteEntry,
+                              icon: const Icon(Icons.delete_outline, size: 18, color: AppColors.oxbloodLit),
+                              label: Text(
+                                'DELETE',
+                                style: AppTypography.labelGothic(color: AppColors.oxbloodLit, fontSize: 11),
+                              ),
+                            ),
                           ),
-                          onPressed: () => _handleSave(addAnother: false),
-                          child: Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.check, size: 18),
-                              const SizedBox(width: 8),
-                              Text(
-                                widget.initialEntry != null ? 'UPDATE ENTRY' : 'SAVE ENTRY',
-                                style: AppTypography.labelGothic(
-                                  color: isDark ? AppColors.obsidian : AppColors.vellumInk,
-                                  fontSize: 13,
+                          const SizedBox(width: 10),
+                          Expanded(
+                            flex: 3,
+                            child: ElevatedButton(
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.brass,
+                                foregroundColor: isDark ? AppColors.obsidian : AppColors.vellumInk,
+                                minimumSize: const Size.fromHeight(48),
+                              ),
+                              onPressed: () => _handleSave(addAnother: false),
+                              child: Row(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.check, size: 18),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'UPDATE ENTRY',
+                                    style: AppTypography.labelGothic(
+                                      color: isDark ? AppColors.obsidian : AppColors.vellumInk,
+                                      fontSize: 12,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
+                    : Row(
+                        children: [
+                          Expanded(
+                            child: GestureDetector(
+                              onLongPress: () => _handleSave(addAnother: true),
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.brass,
+                                  foregroundColor: isDark ? AppColors.obsidian : AppColors.vellumInk,
+                                  minimumSize: const Size.fromHeight(48),
+                                ),
+                                onPressed: () => _handleSave(addAnother: false),
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const Icon(Icons.check, size: 18),
+                                    const SizedBox(width: 8),
+                                    Text(
+                                      'SAVE ENTRY',
+                                      style: AppTypography.labelGothic(
+                                        color: isDark ? AppColors.obsidian : AppColors.vellumInk,
+                                        fontSize: 13,
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
-                            ],
+                            ),
                           ),
-                        ),
+                        ],
                       ),
-                    ),
-                  ],
-                ),
               ),
             ],
           ),
