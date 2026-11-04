@@ -1,7 +1,13 @@
+<p align="center">
+  <img src="assets/icon/app_logo.png" alt="Mere Paise Logo" width="120" height="120" style="border-radius: 24px; box-shadow: 0 8px 24px rgba(180, 145, 90, 0.25);" />
+</p>
+
 # Mere Paise (मेरे पैसे)
 
 > **A fast, offline-first personal finance ledger for everyday Indian money, built like an honest account book and not like a toy.**
 
+[![Release](https://img.shields.io/badge/Release-v1.0.1-B4915A?logo=android&logoColor=black)](https://github.com/prayasdev/mere-paise/releases)
+[![Author](https://img.shields.io/badge/Made%20by-prayasdev-8E1B2B?logo=github&logoColor=white)](https://github.com/prayasdev)
 [![Flutter](https://img.shields.io/badge/Flutter-3.x-02569B?logo=flutter&logoColor=white)](https://flutter.dev)
 [![Dart](https://img.shields.io/badge/Dart-3.x-0175C2?logo=dart&logoColor=white)](https://dart.dev)
 [![Firebase](https://img.shields.io/badge/Firebase-Firestore%20Offline-FFCA28?logo=firebase&logoColor=black)](https://firebase.google.com)
@@ -147,7 +153,7 @@ users/{uid}/
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/your-username/mere-paise.git
+   git clone https://github.com/prayasdev/mere-paise.git
    cd mere-paise
    ```
 
@@ -191,14 +197,20 @@ Test coverage includes:
 
 ---
 
-## 🗺️ Roadmap
+## 🗺️ Releases & Roadmap
 
-- [x] **v1.0 (MVP):**
+- [x] **v1.0.1 (Current Release):**
+  - [x] Custom Gothic Rupee emblem & app launcher icon
+  - [x] Advanced Ledger sorting (`Newest`, `Oldest`, `Highest Amount ₹ ↓`, `Lowest Amount ₹ ↑`)
+  - [x] Multi-facet ledger filtering (Type, Category, Date range presets, Tags) with active filter chips & one-tap reset
+  - [x] Physics-based fluid transitions (`AnimatedSize`, `AnimatedOpacity`, tab cross-fades, soft rounded geometry)
+  - [x] Dedicated Categories management hub
+  - [x] Complete Insights analytics redesign (cash flow donut chart, cadence velocity, budget tracker)
+  - [x] Bold high-contrast typography across Obsidian and Vellum themes
+- [x] **v1.0.0 (MVP):**
   - [x] Core offline-first ledger with integer paise calculations
   - [x] Quick Add bottom sheet with custom numeric keypad
-  - [x] Chronological Ledger with search, multi-facet filtering, and swipe-to-delete undo
-  - [x] Insights with 5 period views (Day, Week, Month, Year, All) and category drill-downs
-  - [x] Full Categories CRUD with reassignment flow & Tag management
+  - [x] Chronological Ledger with day subtotals and swipe-to-delete undo
   - [x] Obsidian (Dark) & Vellum (Light) themes
   - [x] CSV export & Firestore background sync
 - [ ] **v1.1:**

@@ -584,54 +584,122 @@ class ManageScreen extends ConsumerWidget {
 
             const SizedBox(height: 24),
 
-            // Footer
-            const GothicDivider(showArchMotif: true),
+            // -------------------------------------------------------------
+            // SECTION 6: App Details & Identity
+            // -------------------------------------------------------------
+            Text(
+              'ABOUT & RELEASES',
+              style: AppTypography.labelGothic(context: context, fontSize: 11),
+            ),
             const SizedBox(height: 8),
-            Center(
+
+            GothicCard(
+              padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
-                  Text(
-                    'MERE PAISE • v1.0.0',
-                    style: AppTypography.labelGothic(context: context, fontSize: 11),
-                  ),
-                  const SizedBox(height: 6),
-                  InkWell(
-                    onTap: () async {
-                      final url = Uri.parse('https://github.com/prayasdev');
-                      try {
-                        await launchUrl(url, mode: LaunchMode.externalApplication);
-                      } catch (e) {
-                        debugPrint('Could not launch dev link: $e');
-                      }
-                    },
-                    borderRadius: BorderRadius.circular(4),
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Text(
-                            'Made with ',
-                            style: AppTypography.bodySmall(context: context),
-                          ),
-                          const Icon(Icons.favorite, size: 14, color: AppColors.oxbloodLit),
-                          Text(
-                            ' by ',
-                            style: AppTypography.bodySmall(context: context),
-                          ),
-                          Text(
-                            'prayasdev',
-                            style: AppTypography.bodySmall(
-                              color: AppColors.brass,
-                            ).copyWith(
-                              fontWeight: FontWeight.bold,
-                              decoration: TextDecoration.underline,
-                              decorationColor: AppColors.brass,
+                  Row(
+                    children: [
+                      Container(
+                        width: 52,
+                        height: 52,
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.brass, width: 1.2),
+                          boxShadow: [
+                            BoxShadow(
+                              color: AppColors.brass.withValues(alpha: 0.25),
+                              blurRadius: 8,
+                              offset: const Offset(0, 2),
                             ),
+                          ],
+                          image: const DecorationImage(
+                            image: AssetImage('assets/icon/app_logo.png'),
+                            fit: BoxFit.cover,
                           ),
-                        ],
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text('Mere Paise', style: AppTypography.headingMedium(context: context)),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: AppColors.brass.withValues(alpha: 0.15),
+                                    borderRadius: BorderRadius.circular(4),
+                                    border: Border.all(color: AppColors.brass.withValues(alpha: 0.4)),
+                                  ),
+                                  child: Text(
+                                    'v1.0.1',
+                                    style: AppTypography.labelGothic(color: AppColors.brass, fontSize: 10),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              'The Honest Account Book for Indian Money',
+                              style: AppTypography.bodySmall(context: context),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  const GothicDivider(),
+                  const SizedBox(height: 10),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Solid integer paise arithmetic • Local-first',
+                        style: AppTypography.bodySmall(color: AppColors.textTertiary(context)),
+                      ),
+                      InkWell(
+                        onTap: () async {
+                          final url = Uri.parse('https://github.com/prayasdev');
+                          try {
+                            await launchUrl(url, mode: LaunchMode.externalApplication);
+                          } catch (e) {
+                            debugPrint('Could not launch dev link: $e');
+                          }
+                        },
+                        borderRadius: BorderRadius.circular(4),
+                        child: Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                'Made with ',
+                                style: AppTypography.bodySmall(context: context),
+                              ),
+                              const Icon(Icons.favorite, size: 12, color: AppColors.oxbloodLit),
+                              Text(
+                                ' by ',
+                                style: AppTypography.bodySmall(context: context),
+                              ),
+                              Text(
+                                'prayasdev',
+                                style: AppTypography.bodySmall(
+                                  color: AppColors.brass,
+                                ).copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  decoration: TextDecoration.underline,
+                                  decorationColor: AppColors.brass,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),

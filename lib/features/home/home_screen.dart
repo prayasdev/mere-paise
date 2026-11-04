@@ -55,13 +55,36 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       appBar: AppBar(
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        title: Row(
           children: [
-            Text('MERE PAISE', style: AppTypography.wordmark(context: context, fontSize: 20)),
-            Text(
-              LedgerDateUtils.formatMonthHeader(now).toUpperCase(),
-              style: AppTypography.labelGothic(context: context, fontSize: 10),
+            Container(
+              width: 30,
+              height: 30,
+              margin: const EdgeInsets.only(right: 10),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(7),
+                border: Border.all(color: AppColors.brass.withValues(alpha: 0.5), width: 1),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.brass.withValues(alpha: 0.2),
+                    blurRadius: 4,
+                  ),
+                ],
+                image: const DecorationImage(
+                  image: AssetImage('assets/icon/app_logo.png'),
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('MERE PAISE', style: AppTypography.wordmark(context: context, fontSize: 19)),
+                Text(
+                  LedgerDateUtils.formatMonthHeader(now).toUpperCase(),
+                  style: AppTypography.labelGothic(context: context, fontSize: 10),
+                ),
+              ],
             ),
           ],
         ),
