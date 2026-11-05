@@ -25,6 +25,10 @@ class SettingsNotifier extends Notifier<UserSettings> {
     return ref.watch(ledgerRepositoryProvider).settings;
   }
 
+  void refresh() {
+    state = ref.read(ledgerRepositoryProvider).settings;
+  }
+
   Future<void> updateSettings(UserSettings newSettings) async {
     state = newSettings;
     await ref.read(ledgerRepositoryProvider).updateSettings(newSettings);
@@ -214,6 +218,16 @@ class TransactionsNotifier extends Notifier<List<TransactionEntry>> {
     final repo = ref.read(ledgerRepositoryProvider);
     await repo.rebuildSummaries();
     refresh();
+  }
+
+  Future<int> importBackup(String content, String fileName) async {
+    final repo = ref.read(ledgerRepositoryProvider);
+    final count = await repo.importBackupFile(content, fileName);
+    refresh();
+    ref.read(categoriesProvider.notifier).refresh();
+    ref.read(tagsProvider.notifier).refresh();
+    ref.read(settingsProvider.notifier).refresh();
+    return count;
   }
 
   Future<void> clearAll() async {

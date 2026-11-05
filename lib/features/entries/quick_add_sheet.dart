@@ -311,10 +311,12 @@ class _QuickAddSheetState extends ConsumerState<QuickAddSheet> {
 
       final deleted = await txnNotifier.softDelete(entry.id);
       if (deleted != null) {
+        messenger.clearSnackBars();
         messenger.showSnackBar(
           SnackBar(
             content: Text('Entry removed ($amountText)'),
-            duration: const Duration(seconds: 6),
+            duration: const Duration(seconds: 5),
+            persist: false,
             action: SnackBarAction(
               label: 'UNDO',
               textColor: AppColors.brass,

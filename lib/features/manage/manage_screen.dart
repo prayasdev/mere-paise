@@ -1,3 +1,5 @@
+import 'dart:io';
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:share_plus/share_plus.dart';
@@ -57,83 +59,7 @@ class ManageScreen extends ConsumerWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             // -------------------------------------------------------------
-            // SECTION 1: Offline Sovereignty & Privacy
-            // -------------------------------------------------------------
-            Text(
-              'OFFLINE SOVEREIGNTY & PRIVACY',
-              style: AppTypography.labelGothic(context: context, fontSize: 11),
-            ),
-            const SizedBox(height: 8),
-
-            GothicCard(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: AppColors.brass.withValues(alpha: 0.15),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(Icons.shield_outlined, color: AppColors.brass, size: 22),
-                      ),
-                      const SizedBox(width: 14),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '100% Offline & Private',
-                              style: AppTypography.headingSmall(context: context),
-                            ),
-                            Text(
-                              'Zero cloud servers • Zero trackers • Zero network calls',
-                              style: AppTypography.bodySmall(
-                                color: isDark ? AppColors.verdigrisLit : AppColors.verdigris,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  const GothicDivider(),
-                  const SizedBox(height: 10),
-                  Text(
-                    'All your financial data, accounts, categories, and tags are stored strictly in your device\'s local storage with solid integer paise arithmetic. You own and control 100% of your data.',
-                    style: AppTypography.bodyMedium(context: context),
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                    decoration: BoxDecoration(
-                      color: AppColors.elevated(context),
-                      borderRadius: BorderRadius.circular(6),
-                      border: Border.all(color: AppColors.border(context)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.inventory_2_outlined, size: 16, color: AppColors.textSecondary(context)),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${txns.length} transactions stored safely on this device',
-                          style: AppTypography.labelGothic(context: context, fontSize: 11),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 20),
-
-            // -------------------------------------------------------------
-            // SECTION 2: Categories Hub (Compact Clickable Card)
+            // SECTION 1: Categories Hub (Compact Clickable Card)
             // -------------------------------------------------------------
             Text(
               'CATEGORIES & CLASSIFICATIONS',
@@ -396,13 +322,36 @@ class ManageScreen extends ConsumerWidget {
             const SizedBox(height: 20),
 
             // -------------------------------------------------------------
-            // SECTION 5: Data & Archival
+            // SECTION 4: Data & Archival
             // -------------------------------------------------------------
             Text(
               'DATA & ARCHIVAL',
               style: AppTypography.labelGothic(context: context, fontSize: 11),
             ),
             const SizedBox(height: 8),
+
+            // Records Counter Badge
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              margin: const EdgeInsets.only(bottom: 10),
+              decoration: BoxDecoration(
+                color: AppColors.elevated(context),
+                borderRadius: BorderRadius.circular(6),
+                border: Border.all(color: AppColors.border(context)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.inventory_2_outlined, size: 18, color: AppColors.brass),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      '${txns.length} records saved on this device',
+                      style: AppTypography.labelGothic(context: context, fontSize: 11),
+                    ),
+                  ),
+                ],
+              ),
+            ),
 
             // Export CSV Card
             GothicCard(
@@ -512,6 +461,94 @@ class ManageScreen extends ConsumerWidget {
                         ),
                       ),
                     ],
+                  ),
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 10),
+
+            // Import Backup Card
+            GothicCard(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: AppColors.brass.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(Icons.file_upload_outlined, color: AppColors.brass, size: 24),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('Import Ledger (CSV / JSON)', style: AppTypography.headingSmall(context: context)),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Restore or import transaction records anytime from a previous CSV export or JSON backup file.',
+                              style: AppTypography.bodySmall(context: context),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 14),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        side: BorderSide(color: AppColors.brass.withValues(alpha: 0.5)),
+                        padding: const EdgeInsets.symmetric(vertical: 11),
+                      ),
+                      onPressed: () async {
+                        LedgerHaptics.tick();
+                        try {
+                          final files = await FilePicker.pickFiles(
+                            type: FileType.custom,
+                            allowedExtensions: ['csv', 'json'],
+                          );
+                          if (files.isNotEmpty && files.first.path != null) {
+                            final file = File(files.first.path!);
+                            final content = await file.readAsString();
+                            final count = await ref.read(transactionsProvider.notifier).importBackup(
+                              content,
+                              files.first.name,
+                            );
+                            if (context.mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Successfully imported $count records!'),
+                                  backgroundColor: AppColors.verdigris,
+                                ),
+                              );
+                            }
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Import failed: $e'),
+                                backgroundColor: AppColors.oxblood,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      icon: const Icon(Icons.upload_file_rounded, size: 18, color: AppColors.brass),
+                      label: Text(
+                        'SELECT FILE TO IMPORT',
+                        style: AppTypography.labelGothic(color: AppColors.brass, fontSize: 11),
+                      ),
+                    ),
                   ),
                 ],
               ),
@@ -647,11 +684,6 @@ class ManageScreen extends ConsumerWidget {
                                   ),
                                 ),
                               ],
-                            ),
-                            const SizedBox(height: 2),
-                            Text(
-                              'The Honest Account Book for Indian Money',
-                              style: AppTypography.bodySmall(context: context),
                             ),
                           ],
                         ),

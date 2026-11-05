@@ -4,7 +4,7 @@
 
 # Mere Paise (मेरे पैसे)
 
-> **A fast, offline-first personal finance ledger for everyday Indian money, built like an honest account book and not like a toy.**
+> **A fast, offline-first personal finance ledger for everyday Indian money.**
 
 [![Release](https://img.shields.io/badge/Release-v1.0.1-B4915A?logo=android&logoColor=black)](https://github.com/prayasdev/mere-paise/releases)
 [![Author](https://img.shields.io/badge/Made%20by-prayasdev-8E1B2B?logo=github&logoColor=white)](https://github.com/prayasdev)

@@ -335,10 +335,12 @@ class HomeScreen extends ConsumerWidget {
                         LedgerHaptics.doubleTick();
                         final deleted = await ref.read(transactionsProvider.notifier).softDelete(entry.id);
                         if (context.mounted && deleted != null) {
+                          ScaffoldMessenger.of(context).clearSnackBars();
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text('Entry removed (${CurrencyFormatter.formatPaise(entry.amountPaise)})'),
-                              duration: const Duration(seconds: 6),
+                              duration: const Duration(seconds: 5),
+                              persist: false,
                               action: SnackBarAction(
                                 label: 'UNDO',
                                 textColor: AppColors.brass,
@@ -547,10 +549,12 @@ class HomeScreen extends ConsumerWidget {
                     LedgerHaptics.doubleTick();
                     final deleted = await ref.read(transactionsProvider.notifier).softDelete(entry.id);
                     if (context.mounted && deleted != null) {
+                      ScaffoldMessenger.of(context).clearSnackBars();
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
                           content: Text('Entry removed ($amountText)'),
-                          duration: const Duration(seconds: 6),
+                          duration: const Duration(seconds: 5),
+                          persist: false,
                           action: SnackBarAction(
                             label: 'UNDO',
                             textColor: AppColors.brass,
