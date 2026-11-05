@@ -183,39 +183,6 @@ Test coverage includes:
 
 ---
 
-## 🗺️ Releases & Roadmap
-
-- [x] **v1.0.1 (Current Release):**
-  - [x] 100% offline sovereignty (zero cloud servers, zero network calls, total local privacy)
-  - [x] Native CSV & JSON backup import and restore
-  - [x] Professional CSV export with signed amounts (`+/-`) and Indian Rupee notation (`₹`)
-  - [x] Auto-dismissing 5-second undo notifications for deleted entries
-  - [x] Custom mascot rupee emblem & app launcher icon
-  - [x] Advanced Ledger sorting (`Newest`, `Oldest`, `Highest Amount ₹ ↓`, `Lowest Amount ₹ ↑`)
-  - [x] Multi-facet ledger filtering (Type, Category, Date range presets, Tags) with active filter chips & one-tap reset
-  - [x] Physics-based fluid transitions (`AnimatedSize`, `AnimatedOpacity`, tab cross-fades, soft rounded geometry)
-  - [x] Dedicated Categories management hub
-  - [x] Complete Insights analytics redesign (cash flow donut chart, cadence velocity, budget tracker)
-  - [x] Bold high-contrast typography across Obsidian and Vellum themes
-- [x] **v1.0.0 (MVP):**
-  - [x] Core offline-first ledger with integer paise calculations
-  - [x] Quick Add bottom sheet with custom numeric keypad
-  - [x] Chronological Ledger with day subtotals and swipe-to-delete undo
-  - [x] Obsidian (Dark) & Vellum (Light) themes
-  - [x] CSV export & local-first storage
-- [ ] **v1.1:**
-  - [ ] Multi-account tracking (Cash, Bank, UPI, Credit Card) & inter-account transfers
-  - [ ] Category budgets with progressive warning alerts
-  - [ ] Recurring transactions (Rent, subscriptions, monthly income)
-  - [ ] Biometric app lock (Fingerprint / PIN)
-- [ ] **v1.2:**
-  - [ ] Receipt photo attachments
-  - [ ] Formatted PDF ledger statements
-  - [ ] Full Hindi (हिंदी) localization
-  - [ ] iOS release
-
----
-
 ## 📄 License
 
 This project is licensed under the **GNU General Public License v3.0 (GPLv3)**. See the [LICENSE](LICENSE) file for details.
