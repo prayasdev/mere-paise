@@ -42,11 +42,11 @@ Instead of playful, gamified, or bloated finance apps, Mere Paise embraces a got
 * **Inline tags & notes:** Create `#tags` inline with automatic tag completion.
 * **Duplicate protection:** Prevents accidental double-taps by verifying identical amount, category, and minute.
 
-### 📜 Bahi (Home) & Chronological Ledger
-* **Bahi Overview:** Monthly net balance, side-by-side Out/In summary cards, and a 7-day compact spending bar strip.
+### 📜 Home & Chronological Ledger
+* **Home Overview:** Monthly net balance, side-by-side Spent/Received summary cards, and a 7-day compact spending bar strip.
 * **Grouped Ledger:** Transactions organized by day with day-level subtotals.
-* **Swipe-to-delete with Undo:** 6-second grace period with undo snackbar.
-* **Advanced Multi-Facet Filtering:** Filter by date range, transaction type (Out / In), category, tag, or amount range, with full-text search across notes and tags.
+* **Swipe-to-delete with Undo:** 5-second grace period with auto-dismissing undo notification.
+* **Advanced Multi-Facet Filtering:** Filter by date range, transaction type (Spent / Received), category, tag, or amount range, with full-text search across notes and tags.
 
 ### 📊 Comprehensive Insights & Visualizations
 * **5 Reporting Horizons:** Seamlessly switch between **Day**, **Week**, **Month**, **Year**, and **All-Time** views with previous/next period navigation.
@@ -65,14 +65,13 @@ Instead of playful, gamified, or bloated finance apps, Mere Paise embraces a got
 
 ### 🛡️ 100% Offline Sovereignty & Privacy
 * **Zero cloud clutter:** No servers, no accounts, and no network dependencies. Every rupee is stored locally on-device.
-* **Immediate local responsiveness:** Powered by SQLite/persistent device cache and reactive Riverpod state.
-* **Pristine CSV & JSON Exports:** One-tap export to formatted CSV spreadsheets with Indian Rupee formatting (`₹`), signed amounts (`+`/`-`), category mappings, notes, and tags. Full JSON backup also supported.
+* **Immediate local responsiveness:** Powered by persistent local cache and reactive Riverpod state.
+* **Export & Import (CSV & JSON):** One-tap export to formatted CSV spreadsheets with Indian Rupee notation (`₹`), signed amounts (`+`/`-`), category mappings, notes, and tags. Import/restore from CSV or JSON backups whenever needed.
 
 ### 🎨 Themes & Preferences
 * **Gothic Dark ("Obsidian"):** High-contrast dark theme with `#0C0B0D` background.
 * **Parchment Light ("Vellum"):** High-readability parchment theme with `#EFE8D8` background and `#1A171C` ink text.
 * **Custom Calendars:** Configurable first day of the week (Monday default) and custom month start day (1 to 28) to match monthly salary cycles.
-* **CSV Export:** Export transaction history to CSV anytime.
 
 ---
 
@@ -125,16 +124,14 @@ lib/
 └── main.dart             # App entry point & bottom navigation scaffold
 ```
 
-### Data Storage & Sync Model
+### Local-First Data Storage
 
-```
-users/{uid}/
-├── profile/              # Currency, week start, salary start day
-├── categories/{catId}    # Category name, kind (expense/income), icon, color
-├── tags/{tagId}          # Tag definitions and creation metadata
-├── transactions/{txnId}  # Integer amountPaise, categoryId, dayKey, monthKey, etc.
-└── summaries/{monthKey}  # Precomputed outPaise, inPaise, and category breakdowns
-```
+All data is stored directly in persistent on-device storage with integer paise precision:
+* **`transactions`**: High-performance JSON records with timestamps, exact integer paise amounts, category IDs, notes, and tags.
+* **`categories`**: Custom and default income/expense classification definitions.
+* **`tags`**: Dynamic `#tag` taxonomy and usage frequencies.
+* **`summaries`**: Precomputed monthly aggregates (total spent, received, net balance) for instant dashboard and analytics calculation.
+* **`settings`**: Visual theme, salary cycle date, and week start preferences.
 
 ---
 
@@ -189,7 +186,11 @@ Test coverage includes:
 ## 🗺️ Releases & Roadmap
 
 - [x] **v1.0.1 (Current Release):**
-  - [x] Custom Gothic Rupee emblem & app launcher icon
+  - [x] 100% offline sovereignty (zero cloud servers, zero network calls, total local privacy)
+  - [x] Native CSV & JSON backup import and restore
+  - [x] Professional CSV export with signed amounts (`+/-`) and Indian Rupee notation (`₹`)
+  - [x] Auto-dismissing 5-second undo notifications for deleted entries
+  - [x] Custom mascot rupee emblem & app launcher icon
   - [x] Advanced Ledger sorting (`Newest`, `Oldest`, `Highest Amount ₹ ↓`, `Lowest Amount ₹ ↑`)
   - [x] Multi-facet ledger filtering (Type, Category, Date range presets, Tags) with active filter chips & one-tap reset
   - [x] Physics-based fluid transitions (`AnimatedSize`, `AnimatedOpacity`, tab cross-fades, soft rounded geometry)
@@ -201,7 +202,7 @@ Test coverage includes:
   - [x] Quick Add bottom sheet with custom numeric keypad
   - [x] Chronological Ledger with day subtotals and swipe-to-delete undo
   - [x] Obsidian (Dark) & Vellum (Light) themes
-  - [x] CSV export & Firestore background sync
+  - [x] CSV export & local-first storage
 - [ ] **v1.1:**
   - [ ] Multi-account tracking (Cash, Bank, UPI, Credit Card) & inter-account transfers
   - [ ] Category budgets with progressive warning alerts
